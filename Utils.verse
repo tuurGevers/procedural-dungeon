@@ -377,6 +377,14 @@ ClearHud(Player:player):void=
 # Moves a vector up by a specified amount
 (Translation:vector3).Up(Amount:float)<transacts>:vector3=
     return vector3{X:=Translation.X, Y:=Translation.Y, Z:=Translation.Z+ Amount}
+
+(Translation:vector3).IsEqual(V:vector3)<transacts>:logic=
+    var isEqual:logic = false
+    if(Translation.X = V.X and Translation.Y = V.Y and Translation.Z = V.Z):
+        Print("Equal")
+        set isEqual = true
+    return isEqual
+
 #sorting
 (Input:[]t where t:type).QuickSort<public>(CompareFunction(Element1:t, Element2:t)<transacts>:int)<transacts>:[]t = 
 
