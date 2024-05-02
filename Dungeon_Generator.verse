@@ -101,6 +101,7 @@ Corridor := class():
 
 Dungeon := class():
     var Rooms: []Room = array{}
+    var Corridors: []Corridor = array{}
     var MaxRooms:int
     RoomSize: float = 100.0
     SpawnPoint : vector3 = vector3{X:=0.0, Y:=0.0, Z:=50.0}
@@ -118,43 +119,75 @@ Dungeon := class():
         #TODO: Implement this function.
         return true
 
-    CalculateNextRoomCoordinates(currentRoom:Room): tuple(int, int)=
-        # Determine a random direction for the next room
-        direction := GetRandomInt(0, 3)
-        var NextRoomCoordinates :tuple(int, int)= (currentRoom.X, currentRoom.Y)
-        case (direction):
-            0=>return (NextRoomCoordinates(0) + 1 , NextRoomCoordinates(1))
-            1=>return (NextRoomCoordinates(0) - 1 , NextRoomCoordinates(1))
-            2=>return (NextRoomCoordinates(0), NextRoomCoordinates(1) + 1 )
-            _=>return (NextRoomCoordinates(0), NextRoomCoordinates(1) - 1)
+    CalculateNextRoomCoordinates(currentRoom:Room): tuple(int, int) =
+        # Make multiple attempts to find a valid position
+        for (attempts := 0.. 10):
+            direction := GetRandomInt(0, 3)
+            var NextRoomX :int= currentRoom.X
+            var NextRoomY :int= currentRoom.Y
+            
+            case (direction):
+                0=> set NextRoomX += 1
+                1=> set NextRoomX -= 1
+                2=> set NextRoomY += 1
+                _=> set NextRoomY -= 1
+            
+            # Check if the room is occupied
+            if (IsRoomOccupied(NextRoomX, NextRoomY) = false):
+                return (NextRoomX, NextRoomY)
+        
+        # If no unoccupied space is found, return current coordinates as fallback
+        return (currentRoom.X, currentRoom.Y)
+
+    IsRoomOccupied(X:int, Y:int)<transacts>: logic =
+        for(room :Rooms):
+            if (room.X = X and room.Y = Y):
+                return true
+        return false
 
     # Generate a dungeon.
-    Generate(): void =
+    Generate()<suspends>: void =
         # Add the spawn room
         var currentRoom :Room= CreateRoom(0, 0, 0, Self)
         AddRoom(currentRoom)
     
+        var I:int = 0
         # Generate additional rooms
-        for(I:=0..MaxRooms-1):
+        loop:
+            if(I>MaxRooms-1):
+                break
+            
+            set I+=1
             # Determine a random direction and position for the next room
             nextRoomCoordinates := CalculateNextRoomCoordinates(currentRoom)
-            
+            # Check if we didn't find a new position
+            if( nextRoomCoordinates = (currentRoom.X, currentRoom.Y)):
+                Print("Could not find position for new room.")
+                break
             # Create the new room and corridor
-            nextRoom := CreateRoom(nextRoomCoordinates(0), nextRoomCoordinates(1), 1, Self)
-            AddRoom(nextRoom)
+            var nextRoom: Room =CreateRoom(nextRoomCoordinates(0), nextRoomCoordinates(1), 1, Self)
+            if(I>MaxRooms-1):
+                set nextRoom = CreateRoom(nextRoomCoordinates(0), nextRoomCoordinates(1), 2, Self)
+           
+            
             corridor := CreateCorridor(currentRoom, nextRoom, Self)
+            set Corridors += array{corridor}
+            set Rooms += array{nextRoom}
 
             # Update the current room
             set currentRoom = nextRoom
 
-            # Spawn the corridor and room
+        for(Index->room :Rooms):
+            Sleep(0.15)
+            room.SpawnRoom()
+            if(corridor :=Corridors[Index]):
+                Sleep(0.05)
+                corridor.SpawnCorridor()
+        
+        
+    SpawnCorridorsAsync()<suspends>:void=
+        for(corridor :Corridors):
+            Sleep(0.2)
             corridor.SpawnCorridor()
-            currentRoom.SpawnRoom()
-    
-        # Set the boss room as the furthest room from the spawn
-        bossRoom := FindFarthestRoom()
-        set bossRoom.Type = 2  # Assuming 2 denotes a boss room type
-        bossRoom.SpawnRoom()
-
     FindFarthestRoom():Room=
         return CreateRoom(-1,-1,-1, Self)
