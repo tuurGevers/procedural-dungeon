@@ -80,6 +80,10 @@ Corridor := class():
                 Z:= 50.0
             }
     
+    Print():void=
+        Print("Start Room: X= {StartRoom.X}, Y= {StartRoom.Y}, Type= {StartRoom.Type}")
+        Prop.GetTransform().Translation.Print(?Msg:="Corridor")
+        Print("End Room: X= {EndRoom.X}, Y= {EndRoom.Y}, Type= {EndRoom.Type}")
 
     GetRotation():rotation=
         if(StartRoom.X > EndRoom.X or StartRoom.X < EndRoom.X): 
@@ -122,7 +126,6 @@ Dungeon := class():
     # Add a room to the dungeon.
     AddRoom(room:Room):void=
         set Rooms += array{room}
-        Print("Room added at coordinates: X= {room.X},  Y={room.Y}, Type=, {room.Type}")
     
 
     CheckAccessibility():logic=
@@ -237,6 +240,7 @@ Dungeon := class():
             if(corridor :=Corridors[Index]):
                 Sleep(0.05)
                 corridor.SpawnCorridor()
+                corridor.Print()
         
         for(room:Rooms):
             var StackIndex:int = 0

@@ -17,9 +17,10 @@ DungeonMain := class(creative_device):
 
     OnBegin<override>()<suspends>:void=
         # Initialize the dungeon
-        dungeon := CreateDungeon(20, SpawnCube, CombatCube, BossCube, CorridorAsset)
-        dungeon.Generate()
+        # dungeon := CreateDungeon(20, SpawnCube, CombatCube, BossCube, CorridorAsset)
+        # dungeon.Generate()
        
+        Dungeon2:= CreateDungeonV2(20, 3, 8, 6, CombatCube)
 
         # Optionally, print out positions and other properties for debugging
         Print("Room and corridor spawning complete. Check visualization for correctness.")
