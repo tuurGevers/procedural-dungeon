@@ -16,10 +16,9 @@ CreateRoomV2(X:int, Y:int, Width:int, Height:int, Type:string, Parent:DungeonV2)
     room.Init()
     return room
 
-CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset): DungeonV2 =
-    Print("todo: create dungeon")
+CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset): DungeonV2 =
     # Implementation to create a dungeon
-    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube}
+    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset}
     dungeon.Generate(PreferredRooms, MinRoomSize, MaxRoomSize, MinBuffer)
     return dungeon
 
@@ -47,16 +46,21 @@ RoomV2 := class():
     var Props: []creative_prop = array{}
     Parent: DungeonV2
 
+    var MiddleLocation: vector3 = vector3{X:=0.0, Y:=0.0, Z:=0.0}
+
     Init():void=
         for(i := 0..Width-1):
             for(j := 0..Height-1):
-                Print("Spawning tile at {X*1.0+i*100.0}, {Y*1.0+j*100.0}, 50.0")
+                # Print("Spawning tile at {X*1.0+i*100.0}, {Y*1.0+j*100.0}, 50.0")
                 Spawn:= vector3{X:=(X+i)*100.0, Y:=(Y+j)*100.0, Z:=50.0}
                 # Spawn a floor tile at the given position
                 Prop:=SpawnTarget(Spawn, Parent.CombatCube)
                 set Props += array{Prop}
 
-        Print("todo: init room")
+        # Calculate the middle location of the room
+        if(Cube:= Props[Floor(Width/2)-Floor(1*Height/2)]):
+            set MiddleLocation = Cube.GetTransform().Translation
+
         # Implementation to initialize the room
 
     
@@ -64,7 +68,7 @@ RoomV2 := class():
 
 DungeonV2 := class():
     CombatCube: creative_prop_asset 
-
+    LinePropAsset : creative_prop_asset
     var OccupancyGrid: [][]logic = array{}
 
     # List of all rooms in the dungeon
@@ -76,6 +80,24 @@ DungeonV2 := class():
 
     PreferedRooms:int
     
+    # Function to calculate the midpoints of rooms and triangulate them
+    TriangulateRooms(): void =
+        # Collect the midpoint of each room in the dungeon
+        var Points: []Point = array{}
+        for(room :Rooms):
+            Location:= vector2{X:=room.MiddleLocation.X, Y:=room.MiddleLocation.Y}
+            set Points += array{CreatePoint(Location.X, Location.Y)}
+
+        # Initialize the Delaunay triangulation with these points
+        Triangulation := DelaunayTriangulation{LinePropAsset:= LinePropAsset}  # Ensure LinePropAsset is defined or passed appropriately
+        Triangulation.Initialize(Points)
+
+        # Perform the triangulation
+        Triangulation.Triangulate(Points)
+
+        # Optionally, you can draw the triangles for visualization purposes
+        Triangulation.DrawTriangles()
+
     # Function to add a room to the dungeon
     AddRoom(room:RoomV2): void =
         set Rooms += array{room}
@@ -86,6 +108,7 @@ DungeonV2 := class():
         var RoomsCreated:int = 0
 
         loop:
+            Print("Creating room {RoomsCreated+1}")
             if(RoomsCreated >PreferredRooms):
                 break
 
@@ -119,8 +142,9 @@ DungeonV2 := class():
                 Print("No more space available for new rooms.")
                 break
 
-        Print("Dungeon generation complete. Created {RoomsCreated} rooms.")
-    
+        Print("Dungeon generation complete. Created {RoomsCreated} rooms. Starting triangulation.")
+        TriangulateRooms()
+        Print("Triangulation complete.")
 
         
 
