@@ -14,13 +14,14 @@ DungeonMain := class(creative_device):
     @editable CombatCube: creative_prop_asset = DefaultCreativePropAsset
     @editable BossCube: creative_prop_asset = DefaultCreativePropAsset
     @editable CorridorAsset : creative_prop_asset = DefaultCreativePropAsset
+    @editable DebugCube : creative_prop_asset = DefaultCreativePropAsset
     @editable     LinePropAsset : creative_prop_asset = DefaultCreativePropAsset
     OnBegin<override>()<suspends>:void=
         # Initialize the dungeon
         # dungeon := CreateDungeon(20, SpawnCube, CombatCube, BossCube, CorridorAsset)
         # dungeon.Generate()
        
-        Dungeon2:= CreateDungeonV2(13, 3, 6, 10, CombatCube, LinePropAsset, BossCube)
+        Dungeon2:= CreateDungeonV2(13, 3, 6, 10, CombatCube, LinePropAsset, BossCube, DebugCube)
         
 
         # Optionally, print out positions and other properties for debugging

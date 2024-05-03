@@ -16,9 +16,9 @@ CreateRoomV2(X:int, Y:int, Width:int, Height:int, Type:string, Parent:DungeonV2)
     room.Init()
     return room
 
-CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset, BossCube:creative_prop_asset): DungeonV2 =
+CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset, BossCube:creative_prop_asset,DebugCube:creative_prop_asset): DungeonV2 =
     # Implementation to create a dungeon
-    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset, BossCube:=BossCube}
+    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset, BossCube:=BossCube, DebugCube:=DebugCube}
     spawn. dungeon.Generate(MinRoomSize, MaxRoomSize, MinBuffer)
     return dungeon
 
@@ -95,6 +95,7 @@ DungeonV2 := class():
     CombatCube: creative_prop_asset 
     LinePropAsset : creative_prop_asset
     BossCube : creative_prop_asset
+    DebugCube: creative_prop_asset
     var OccupancyGrid: [][]logic = array{}
 
     # List of all rooms in the dungeon
@@ -198,9 +199,10 @@ DungeonV2 := class():
 
             if(FoundSpot= true):
                 var NewRoom:RoomV2 = CreateRoomV2(RoomX, RoomY, RoomWidth, RoomHeight, "normal", Self)
-                MarkAreaOccupied(RoomX, RoomY, RoomWidth, RoomHeight)
-                AddRoom(NewRoom)
-                set RoomsCreated += 1
+                if(HalfBuffer:=Floor(MinBuffer/2)):
+                    MarkAreaOccupied(RoomX, RoomY, RoomWidth, RoomHeight,HalfBuffer)
+                    AddRoom(NewRoom)
+                    set RoomsCreated += 1
             else:
                 Print("No more space available for new rooms.")
                 break
@@ -219,15 +221,30 @@ DungeonV2 := class():
                 if(set OccupancyGrid[I][J] = false){}
 
      # Checks if the specified area is free
+    # Checks if the specified area is free
     IsAreaFree(X:int, Y:int, _Width:int, _Height:int, Buffer:int)<transacts>: logic =
-        for (x := Max(0, X - Buffer)..Min(_Width-1, X + _Width + Buffer)):
-            for (y := Max(0, Y - Buffer)..Min(_Height-1, Y + _Height + Buffer)):
+        # Adjust the bounds to include the buffer space
+        StartX := Max(0, X - Buffer)
+        EndX := Min(_Width - 1 + X + Buffer, _Width - 1)
+        StartY := Max(0, Y - Buffer)
+        EndY := Min(_Height - 1 + Y + Buffer, _Height - 1)
+
+        # Iterate over the adjusted area to check for free space
+        for (x := StartX.. EndX):
+            for (y := StartY.. EndY):
                 if (OccupancyGrid[x][y] = true):
-                    return false
-        return true
+                    return false  # The area is not free
+        return true  # The area is free
+
         
      # Marks the specified area as occupied
-    MarkAreaOccupied(X:int, Y:int, _Width:int, _Height:int): void =
-        for (x := X..X + _Width-1):
-            for (y := Y..Y + _Height-1):
+    # Marks the specified area as occupied
+    MarkAreaOccupied(X:int, Y:int, _Width:int, _Height:int, HalfBuffer:int): void =
+        for (x := X-HalfBuffer..X + _Width+HalfBuffer):
+            for (y := Y-HalfBuffer..Y + _Height+HalfBuffer):
                 if(set OccupancyGrid[x][y] = true){}
+                # Calculate position for each grid cell
+                Spawn:= vector3{X:=x*100.0, Y:=y*100.0, Z:=75.0}  # Adjusted to use x and y
+                # Spawn a transparent debug cube at calculated position
+                Prop:=SpawnTarget(Spawn, DebugCube)
+
