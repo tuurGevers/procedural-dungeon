@@ -41,7 +41,7 @@ DelaunayTriangle := class:
         Print("Triangle with vertices {A.X}, {A.Y}, {B.X}, {B.Y}, {C.X}, {C.Y}")
 
     # Method to determine if point P is inside the circumcircle made by the triangle vertices A, B, C
-    IsPointInside(P: Point)<transacts><decides>: void=
+    IsPointInside(P: Point)<transacts>: logic=
         # Compute the determinant of the matrix formed by the points
         Matrix := array{
             array{A.X - P.X, A.Y - P.Y, (Pow(A.X,2.0) - Pow(P.X,2.0)) + (Pow(A.Y,2.0) - Pow(P.Y,2.0))},
@@ -50,10 +50,13 @@ DelaunayTriangle := class:
         }
         # Calculate the determinant
         Det := Determinant(Matrix)
-        Print("Determinant for Point {P.X}, {P.Y} with Triangle {A.X}, {A.Y}, {B.X}, {B.Y}, {C.X}, {C.Y} is {Det}")
+        # Print("Determinant for Point {P.X}, {P.Y} with Triangle {A.X}, {A.Y}, {B.X}, {B.Y}, {C.X}, {C.Y} is {Det}")
 
         # If the determinant is greater than zero, P is inside the circumcircle (for CCW orientation)
-        Det > 0.0
+        if(Det>0.0):
+            return true
+        else:
+            return false
 
     # Method to calculate the determinant of a 3x3 matrix
     Determinant(Matrix: [][]float)<transacts>: float=
@@ -84,15 +87,15 @@ DelaunayTriangle := class:
 
         # Calculate the distance between the points to set the scale of the line prop
         LineLength := Sqrt(Pow(End.X - Start.X, 2.0) + Pow(End.Y - Start.Y, 2.0))
-        Scale := vector3{X:=LineLength / 100.0, Y:=0.1, Z:=0.1}  # Adjust Y and Z for thickness
+        Scale := vector3{X:=LineLength / 35.0, Y:=0.1, Z:=0.1}  # Adjust Y and Z for thickness
 
         # Calculate the angle to rotate the line prop
         Angle := ArcTan(End.Y - Start.Y, End.X - Start.X)
-        Rotation := MakeRotationFromYawPitchRollDegrees(0.0, 0.0, RadiansToDegrees(Angle))
+        Rotation := MakeRotationFromYawPitchRollDegrees( RadiansToDegrees(Angle), 0.0, 0.0)
 
         # Spawn the line prop at the calculated location with the appropriate rotation and scale
         Prop := SpawnTarget(SpawnLocation, LineProp, ?Scale := Scale)
-        if(Prop.TeleportTo[SpawnLocation, Rotation]){}
+        if(Prop.TeleportTo[SpawnLocation,Prop.GetTransform().Rotation.ApplyYaw(Angle)]){}
 
 (Edge1:tuple(Point,Point)).Equals(Edge2:tuple(Point,Point))<transacts><decides>: void=
     var IsEqual: logic = false
@@ -118,6 +121,8 @@ CountClass:= class:
 DelaunayTriangulation := class:
     var Triangles: []DelaunayTriangle = array{}
     LinePropAsset : creative_prop_asset
+    BossCube : creative_prop_asset
+
     # Initialize by creating a super triangle
     Initialize(points: []Point): void=
         # Find bounds of all points (you might want to add some buffer or margin)
@@ -128,15 +133,28 @@ DelaunayTriangulation := class:
         MaxY  := Bounds(3)
         MidX := (MinX + MaxX) / 2.0  # Calculate the midpoint along X
 
+        Print("Bounds: {MinX}, {MaxX}, {MinY}, {MaxY}")
+        SpawnTarget(vector3{X:=MinX, Y:=MinY, Z:=50.0}, BossCube, ?Scale:=vector3{X:=4.0, Y:=4.0, Z:=4.0})
+        SpawnTarget(vector3{X:=MaxX, Y:=MaxY, Z:=50.0}, BossCube, ?Scale:=vector3{X:=4.0, Y:=4.0, Z:=4.0})
         # Create a super triangle
-        SuperTriangle := CreateDelaunayTriangle(
-            CreatePoint((MinX - 10*1.0), (MinY - 10*1.0)),
-            CreatePoint((MaxX + 10*1.0), (MinY - 10*1.0)),
-            CreatePoint(MidX, MaxY + 10.0),
+       # Create two triangles from the bounding box
+        Triangle1 := CreateDelaunayTriangle(
+            CreatePoint(MinX, MinY),
+            CreatePoint(MaxX, MinY),
+            CreatePoint(MinX, MaxY),
             LinePropAsset
         )
-        SuperTriangle.Print()
-        set Triangles = array{SuperTriangle}
+        Triangle2 := CreateDelaunayTriangle(
+            CreatePoint(MaxX, MinY),
+            CreatePoint(MaxX, MaxY),
+            CreatePoint(MinX, MaxY),
+            LinePropAsset
+        )
+
+        # Add triangles to the triangulation list
+        set Triangles = array{Triangle1, Triangle2}
+
+        
 
     # Main function to process all points
     Triangulate(points: []Point): void=
@@ -147,37 +165,45 @@ DelaunayTriangulation := class:
     
 
     # Add a point to the triangulation
+    # Add a point to the triangulation
     AddPoint(point: Point): void=
+        # Print("Processing new point: {point.X}, {point.Y}")
+        var PointMap: [string]Point = map{}
         var BadTriangles :[]DelaunayTriangle= array{}
         # Find all triangles that are no longer valid
         for(triangle :Triangles):
-            if(triangle.IsPointInside[point]):
+            if(triangle.IsPointInside(point)= true):
+                # Print("Point {point.X}, {point.Y} is inside triangle {triangle.UUID}")
                 set BadTriangles += array{triangle}
 
-        
-       # Assuming we are inside the AddPoint method after identifying BadTriangles
-        var all_edges_count :[string]CountClass = map{}  # Dictionary to count edge appearances
+        var edgeMap :[string]int = map{}  # Map to count edges
 
-        # Collect edges from BadTriangles and count each occurrence
+        # Collect edges from BadTriangles
         for(triangle :BadTriangles):
-            edges := triangle.GetEdges()  # Ensure this method returns all edges of the triangle
-            for(edge :edges):
+            for(edge : triangle.Edges):
+                if(set PointMap[edge(0).UUID] = edge(0)){}
+                if(set PointMap[edge(1).UUID] = edge(1)){}
                 normalized_edge := normalize_edge(edge)
-                Key:= "{normalized_edge(0).UUID}{normalized_edge(1).UUID}"
-                if (all_edges_count[Key]):
-                    if(set all_edges_count[Key].count += 1){}
+                edgeKey := "{normalized_edge(0).UUID}-{normalized_edge(1).UUID}"
+                if (edgeMap[edgeKey]):
+                    if(set edgeMap[edgeKey] += 1){}
                 else:
-                    if(set all_edges_count[Key] = CountClass{Point1:=normalized_edge(0), Point2:=normalized_edge(1)}){}
-
-        # Identify boundary edges (edges appearing exactly once)
+                    if(set edgeMap[edgeKey] = 1){}
+    
+        # Identify boundary edges
         var boundary_edges :[]tuple(Point, Point) = array{}
-        for(edge->CClass :all_edges_count):
-            if (CClass.count = 1):
-                set boundary_edges += array{(CClass.Point1, CClass.Point2)}
+        for(edgeKey-> count : edgeMap):
+            if (count = 1):  # Boundary edges appear exactly once
+                if(SPlitKeys:= edgeKey.Split("-"), Key1:=SPlitKeys[0], Key2:=SPlitKeys[1]):
+                    if(Point1 := PointMap[Key1], Point2 := PointMap[Key2]):
+                        edge := (Point1, Point2)
+                        set boundary_edges += array{edge}
+                        # Print("Boundary edge added: {edge(0).X}, {edge(0).Y} to {edge(1).X}, {edge(1).Y}")
 
-        # Continue to re-triangulate using boundary_edges
-        for(edge :boundary_edges):
+        # Re-triangulate using boundary edges
+        for(edge : boundary_edges):
             new_triangle := CreateDelaunayTriangle(edge(0), edge(1), point, LinePropAsset)
+            # Print("New Triangle Created with vertices {edge(0).X}, {edge(0).Y}, {edge(1).X}, {edge(1).Y}, {point.X}, {point.Y}")
             set Triangles += array{new_triangle}
             # Consider edge flipping here or after all new triangles are added
             EdgeFlip(new_triangle)
@@ -275,13 +301,13 @@ DelaunayTriangulation := class:
                 var TempMaxY: float = MaxY
     
                 for(point :points):
-                    if(point.X < MinX):
+                    if(point.X < TempMinX):
                         set TempMinX = point.X
-                    if(point.X > MaxX):
+                    if(point.X > TempMaxX):
                         set TempMaxX = point.X
-                    if(point.Y < MinY):
+                    if(point.Y < TempMinY):
                         set TempMinY = point.Y
-                    if(point.Y > MaxY):
+                    if(point.Y > TempMaxY):
                         set TempMaxY = point.Y
             
                 # Return an array containing the minimum and maximum bounds

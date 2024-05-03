@@ -9,17 +9,17 @@ using { /Fortnite.com/Game }
 using { /UnrealEngine.com/Temporary/UI }
 
 # Function to create a room
-CreateRoomV2(X:int, Y:int, Width:int, Height:int, Type:string, Parent:DungeonV2): RoomV2 =
+CreateRoomV2(X:int, Y:int, Width:int, Height:int, Type:string, Parent:DungeonV2)<suspends>: RoomV2 =
     Print("todo: create room")
     # Implementation to initialize a room
     room:=  RoomV2{X:=X, Y:=Y, Width:=Width, Height:=Height, Type:=Type, ID:=GenerateUUID(), Parent:=Parent}
     room.Init()
     return room
 
-CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset): DungeonV2 =
+CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset, BossCube:creative_prop_asset): DungeonV2 =
     # Implementation to create a dungeon
-    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset}
-    dungeon.Generate(PreferredRooms, MinRoomSize, MaxRoomSize, MinBuffer)
+    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset, BossCube:=BossCube}
+    spawn. dungeon.Generate(MinRoomSize, MaxRoomSize, MinBuffer)
     return dungeon
 
 RoomV2 := class():
@@ -48,9 +48,10 @@ RoomV2 := class():
 
     var MiddleLocation: vector3 = vector3{X:=0.0, Y:=0.0, Z:=0.0}
 
-    Init():void=
-        for(i := 0..Width-1):
-            for(j := 0..Height-1):
+    Init()<suspends>:void=
+        for(i := 0..Width):
+            for(j := 0..Height):
+                Sleep(0.01)
                 # Print("Spawning tile at {X*1.0+i*100.0}, {Y*1.0+j*100.0}, 50.0")
                 Spawn:= vector3{X:=(X+i)*100.0, Y:=(Y+j)*100.0, Z:=50.0}
                 # Spawn a floor tile at the given position
@@ -58,8 +59,8 @@ RoomV2 := class():
                 set Props += array{Prop}
 
         # Calculate the middle location of the room
-        if(Cube:= Props[Floor(Width/2)-Floor(1*Height/2)]):
-            set MiddleLocation = Cube.GetTransform().Translation
+        set MiddleLocation = vector3{X:=(X*1.0 + Width*1.0 / 2.0) * 100.0, Y:=(Y*1.0 + Height*1.0 / 2.0) * 100.0, Z:=50.0}
+
 
         # Implementation to initialize the room
 
@@ -69,6 +70,7 @@ RoomV2 := class():
 DungeonV2 := class():
     CombatCube: creative_prop_asset 
     LinePropAsset : creative_prop_asset
+    BossCube : creative_prop_asset
     var OccupancyGrid: [][]logic = array{}
 
     # List of all rooms in the dungeon
@@ -87,9 +89,10 @@ DungeonV2 := class():
         for(room :Rooms):
             Location:= vector2{X:=room.MiddleLocation.X, Y:=room.MiddleLocation.Y}
             set Points += array{CreatePoint(Location.X, Location.Y)}
+            SpawnTarget(vector3{X:=Location.X, Y:=Location.Y, Z:=100.0},BossCube)
 
         # Initialize the Delaunay triangulation with these points
-        Triangulation := DelaunayTriangulation{LinePropAsset:= LinePropAsset}  # Ensure LinePropAsset is defined or passed appropriately
+        Triangulation := DelaunayTriangulation{LinePropAsset:= LinePropAsset, BossCube:=BossCube}  # Ensure LinePropAsset is defined or passed appropriately
         Triangulation.Initialize(Points)
 
         # Perform the triangulation
@@ -103,13 +106,13 @@ DungeonV2 := class():
         set Rooms += array{room}
 
     # Function to generate the dungeon
-    Generate(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int): void =
+    Generate( MinRoomSize:int, MaxRoomSize:int, MinBuffer:int)<suspends>: void =
         InitOccupancyGrid()
         var RoomsCreated:int = 0
 
         loop:
             Print("Creating room {RoomsCreated+1}")
-            if(RoomsCreated >PreferredRooms):
+            if(RoomsCreated >PreferedRooms):
                 break
 
             var RoomWidth:int = GetRandomInt(MinRoomSize, MaxRoomSize)
