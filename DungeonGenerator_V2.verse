@@ -10,15 +10,15 @@ using { /UnrealEngine.com/Temporary/UI }
 
 # Function to create a room
 CreateRoomV2(X:int, Y:int, Width:int, Height:int, Type:string, Parent:DungeonV2)<suspends>: RoomV2 =
-    Print("todo: create room")
     # Implementation to initialize a room
     room:=  RoomV2{X:=X, Y:=Y, Width:=Width, Height:=Height, Type:=Type, ID:=GenerateUUID(), Parent:=Parent}
     room.Init()
     return room
 
-CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset, BossCube:creative_prop_asset,DebugCube:creative_prop_asset): DungeonV2 =
+CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset, BossCube:creative_prop_asset,DebugCube:creative_prop_asset,    DebugLinePropAsset: creative_prop_asset
+): DungeonV2 =
     # Implementation to create a dungeon
-    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset, BossCube:=BossCube, DebugCube:=DebugCube}
+    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset, BossCube:=BossCube, DebugCube:=DebugCube, DebugLinePropAsset:=DebugLinePropAsset}
     spawn. dungeon.Generate(MinRoomSize, MaxRoomSize, MinBuffer)
     return dungeon
 
@@ -75,7 +75,7 @@ RoomV2 := class():
     Init()<suspends>:void=
         for(i := 0..Width):
             for(j := 0..Height):
-                Sleep(0.01)
+                Sleep(0.003)
                 # Print("Spawning tile at {X*1.0+i*100.0}, {Y*1.0+j*100.0}, 50.0")
                 Spawn:= vector3{X:=(X+i)*100.0, Y:=(Y+j)*100.0, Z:=50.0}
                 # Spawn a floor tile at the given position
@@ -96,6 +96,8 @@ DungeonV2 := class():
     LinePropAsset : creative_prop_asset
     BossCube : creative_prop_asset
     DebugCube: creative_prop_asset
+    DebugLinePropAsset: creative_prop_asset
+
     var OccupancyGrid: [][]logic = array{}
 
     # List of all rooms in the dungeon
@@ -141,7 +143,6 @@ DungeonV2 := class():
             for(T:StartingTriangles):
                 for(TEdge: T.Edges):
                     if((TEdge(0).X = edge(0).X and TEdge(0).Y = edge(0).Y) or (TEdge(1).X = edge(1).X and TEdge(1).Y = edge(1).Y)):
-                        Print("Skipping edge")
                         set ShouldSkip = true
             if(ShouldSkip = false):
                 edgeKey := "{sortedEdge(0).UUID}-{sortedEdge(1).UUID}"
@@ -152,13 +153,14 @@ DungeonV2 := class():
             set Edges+= array{Value}
             DrawLine(Value(0), Value(1), LinePropAsset)
 
-        # Now UniqueEdges contains only unique edges
-        Print("edges: {Edges.Length} Unique edges count: {UniqueEdges.Length}")
-
         # Create a minimum spanning tree from the triangulation
-        MST := KruskalMST(Points, Edges)  # Ensure LinePropAsset is defined or passed appropriately 
+        var MST :[]Edge= KruskalMST(Points, Edges)  # Ensure LinePropAsset is defined or passed appropriately 
         Print("edges: {Edges.Length}, mst: {MST.Length}")       
+        
 
+        for(edge:MST):
+            Print("Drawing edge")
+            DrawLine(edge.Point1, edge.Point2, DebugLinePropAsset)
 
 
 
@@ -238,7 +240,6 @@ DungeonV2 := class():
 
         
      # Marks the specified area as occupied
-    # Marks the specified area as occupied
     MarkAreaOccupied(X:int, Y:int, _Width:int, _Height:int, HalfBuffer:int): void =
         for (x := X-HalfBuffer..X + _Width+HalfBuffer):
             for (y := Y-HalfBuffer..Y + _Height+HalfBuffer):
@@ -246,5 +247,5 @@ DungeonV2 := class():
                 # Calculate position for each grid cell
                 Spawn:= vector3{X:=x*100.0, Y:=y*100.0, Z:=75.0}  # Adjusted to use x and y
                 # Spawn a transparent debug cube at calculated position
-                Prop:=SpawnTarget(Spawn, DebugCube)
+                # Prop:=SpawnTarget(Spawn, DebugCube)
 
