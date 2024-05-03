@@ -208,6 +208,76 @@ GenerateUUID():string=
 
     return UUID
 
+(S:string).GetIntValue()<transacts>:int=
+    var TotalValue:int = 0
+    for(C:S):
+        set TotalValue+= C.GetIntValue()
+    return TotalValue
+    
+(C:char).GetIntValue()<transacts>:int=
+    return case(C):
+        '0'=>0
+        '1'=>1
+        '2'=>2
+        '3'=>3
+        '4'=>4
+        '5'=>5
+        '6'=>6
+        '7'=>7
+        '8'=>8
+        '9'=>9
+        'I'=>73
+        'e'=>101
+        '9'=>57
+        'm'=>109
+        'P'=>80
+        'T'=>84
+        'b'=>98
+        '0'=>48
+        'W'=>87
+        'M'=>77
+        'Z'=>90
+        'T'=>84
+        'T'=>84
+        'H'=>72
+        'I'=>73
+        '9'=>57
+        'E'=>69
+        'j'=>106
+        'p'=>112
+        'i'=>105
+        'p'=>112
+        'D'=>68
+        'b'=>98
+        'G'=>71
+        'o'=>111
+        'f'=>102
+        'o'=>111
+        'e'=>101
+        'U'=>85
+        '7'=>55
+        'A'=>65
+        'U'=>85
+        'G'=>71
+        'E'=>69
+        'L'=>76
+        'p'=>112
+        '8'=>56
+        'Q'=>81
+        'q'=>113
+        'l'=>108
+        'z'=>122
+        'k'=>107
+        'H'=>72
+        '0'=>48
+        'T'=>84
+        '9'=>57
+        'r'=>114
+        'H'=>72
+        'w'=>119
+        'f'=>102
+        _=>0
+
 # Generates a random vector3 within a specified range
 GetRandomVector3(Lower:vector3, Upper:vector3):vector3=
     X:= GetRandomFloat(Lower.X, Upper.X)
@@ -415,6 +485,7 @@ SortFunction(Element1: int, Element2: int)<transacts>: int =
         -1
     else:
         0
+
 
 (Input:[]t where t:type).Reverse()<computes>:[]t=
     for (Index -> Unused : Input, Element := Input[Input.Length - Index - 1]). Element

@@ -22,6 +22,30 @@ CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:
     spawn. dungeon.Generate(MinRoomSize, MaxRoomSize, MinBuffer)
     return dungeon
 
+
+ # Helper function to draw a line between two points using a specified prop asset
+DrawLine(Start: Point, End: Point, LineProp: creative_prop_asset)<suspends>: void=
+    # Calculate midpoint for the line prop
+    MidPointX := (Start.X + End.X) / 2.0
+    MidPointY := (Start.Y + End.Y) / 2.0
+    MidPointZ := 50.0  # Assuming a fixed height above ground
+    SpawnLocation := vector3{X:=MidPointX, Y:=MidPointY, Z:=MidPointZ}
+
+    # Calculate the distance between the points to set the scale of the line prop
+    LineLength := Sqrt(Pow(Abs(End.X - Start.X), 2.0) + Pow(Abs(End.Y - Start.Y), 2.0))
+    
+    
+    var Scale :vector3= vector3{X:=LineLength / 40.0, Y:=0.1, Z:=0.1}  # Adjust Y and Z for thickness
+    if(LineLength>0.1):
+
+        # Calculate the angle to rotate the line prop
+        Angle := ArcTan(End.Y - Start.Y, End.X - Start.X)
+        Rotation := MakeRotationFromYawPitchRollDegrees( RadiansToDegrees(Angle), 0.0, 0.0)
+
+        # Spawn the line prop at the calculated location with the appropriate rotation and scale
+        Prop := SpawnTarget(SpawnLocation, LineProp, ?Scale := Scale)
+        Sleep(0.005)
+        if(Prop.TeleportTo[SpawnLocation,Prop.GetTransform().Rotation.ApplyYaw(Angle)]){}    
 RoomV2 := class():
     # Unique identifier for the room
     var ID: string 
@@ -81,9 +105,15 @@ DungeonV2 := class():
     var Height:int
 
     PreferedRooms:int
-    
+    # Function to sort edge points by ID to ensure consistency
+    SortEdgePoints(edge: tuple(Point, Point)): tuple(Point, Point) =
+        if (edge(0).UUID.GetIntValue() < edge(1).UUID.GetIntValue()):
+            return (edge(0), edge(1))
+        else:
+            return (edge(1), edge(0))
+
     # Function to calculate the midpoints of rooms and triangulate them
-    TriangulateRooms(): void =
+    TriangulateRooms()<suspends>: void =
         # Collect the midpoint of each room in the dungeon
         var Points: []Point = array{}
         for(room :Rooms):
@@ -93,13 +123,43 @@ DungeonV2 := class():
 
         # Initialize the Delaunay triangulation with these points
         Triangulation := DelaunayTriangulation{LinePropAsset:= LinePropAsset, BossCube:=BossCube}  # Ensure LinePropAsset is defined or passed appropriately
-        Triangulation.Initialize(Points)
+        StartingTriangles:= Triangulation.Initialize(Points)
 
         # Perform the triangulation
-        Triangulation.Triangulate(Points)
+        Triangles := Triangulation.Triangulate(Points)
 
-        # Optionally, you can draw the triangles for visualization purposes
-        Triangulation.DrawTriangles()
+        var Edges: []tuple(Point,Point) = array{}
+        for(triangle :Triangles):
+            for(edge:triangle.Edges):
+                set Edges += array{edge}
+
+        var UniqueEdges :[string]tuple(Point,Point)= map{}
+        for (edge : Edges):
+            var ShouldSkip:logic = false
+            sortedEdge := SortEdgePoints(edge)
+            for(T:StartingTriangles):
+                for(TEdge: T.Edges):
+                    if((TEdge(0).X = edge(0).X and TEdge(0).Y = edge(0).Y) or (TEdge(1).X = edge(1).X and TEdge(1).Y = edge(1).Y)):
+                        Print("Skipping edge")
+                        set ShouldSkip = true
+            if(ShouldSkip = false):
+                edgeKey := "{sortedEdge(0).UUID}-{sortedEdge(1).UUID}"
+                if(set UniqueEdges[edgeKey] = edge){}
+
+        set Edges = array{}
+        for(Key->Value: UniqueEdges):
+            set Edges+= array{Value}
+            DrawLine(Value(0), Value(1), LinePropAsset)
+
+        # Now UniqueEdges contains only unique edges
+        Print("edges: {Edges.Length} Unique edges count: {UniqueEdges.Length}")
+
+        # Create a minimum spanning tree from the triangulation
+        MST := KruskalMST(Points, Edges)  # Ensure LinePropAsset is defined or passed appropriately 
+        Print("edges: {Edges.Length}, mst: {MST.Length}")       
+
+
+
 
     # Function to add a room to the dungeon
     AddRoom(room:RoomV2): void =
@@ -112,7 +172,7 @@ DungeonV2 := class():
 
         loop:
             Print("Creating room {RoomsCreated+1}")
-            if(RoomsCreated >PreferedRooms):
+            if(RoomsCreated >=PreferedRooms):
                 break
 
             var RoomWidth:int = GetRandomInt(MinRoomSize, MaxRoomSize)

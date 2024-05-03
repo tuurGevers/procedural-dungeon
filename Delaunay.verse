@@ -24,6 +24,17 @@ CreateDelaunayTriangle(A: Point, B: Point, C: Point, LinePropAsset:creative_prop
     Triangle.Init()
     return Triangle
     
+# Method to calculate the determinant of a 3x3 matrix
+Determinant(Matrix: [][]float)<transacts>: float=
+    if(Det:=
+        Matrix[0][0] * (Matrix[1][1] * Matrix[2][2] - Matrix[1][2] * Matrix[2][1]) -
+        Matrix[0][1] * (Matrix[1][0] * Matrix[2][2] - Matrix[1][2] * Matrix[2][0]) +
+        Matrix[0][2] * (Matrix[1][0] * Matrix[2][1] - Matrix[1][1] * Matrix[2][0])
+    ):
+        return Det
+    else:
+        return 0.0
+
 DelaunayTriangle := class:
     var A: Point
     var B: Point
@@ -58,18 +69,9 @@ DelaunayTriangle := class:
         else:
             return false
 
-    # Method to calculate the determinant of a 3x3 matrix
-    Determinant(Matrix: [][]float)<transacts>: float=
-        if(Det:=
-            Matrix[0][0] * (Matrix[1][1] * Matrix[2][2] - Matrix[1][2] * Matrix[2][1]) -
-            Matrix[0][1] * (Matrix[1][0] * Matrix[2][2] - Matrix[1][2] * Matrix[2][0]) +
-            Matrix[0][2] * (Matrix[1][0] * Matrix[2][1] - Matrix[1][1] * Matrix[2][0])
-        ):
-            return Det
-        else:
-            return 0.0
+    
     ## Method to draw the triangle edges as lines in the game world
-    Draw(LineProp: creative_prop_asset): void=
+    Draw(LineProp: creative_prop_asset)<suspends>: void=
         # Draw line from A to B
         DrawLine(A, B, LineProp)
         # Draw line from B to C
@@ -77,25 +79,7 @@ DelaunayTriangle := class:
         # Draw line from C to A
         DrawLine(C, A, LineProp)
 
-    # Helper function to draw a line between two points using a specified prop asset
-    DrawLine(Start: Point, End: Point, LineProp: creative_prop_asset): void=
-        # Calculate midpoint for the line prop
-        MidPointX := (Start.X + End.X) / 2.0
-        MidPointY := (Start.Y + End.Y) / 2.0
-        MidPointZ := 50.0  # Assuming a fixed height above ground
-        SpawnLocation := vector3{X:=MidPointX, Y:=MidPointY, Z:=MidPointZ}
-
-        # Calculate the distance between the points to set the scale of the line prop
-        LineLength := Sqrt(Pow(End.X - Start.X, 2.0) + Pow(End.Y - Start.Y, 2.0))
-        Scale := vector3{X:=LineLength / 35.0, Y:=0.1, Z:=0.1}  # Adjust Y and Z for thickness
-
-        # Calculate the angle to rotate the line prop
-        Angle := ArcTan(End.Y - Start.Y, End.X - Start.X)
-        Rotation := MakeRotationFromYawPitchRollDegrees( RadiansToDegrees(Angle), 0.0, 0.0)
-
-        # Spawn the line prop at the calculated location with the appropriate rotation and scale
-        Prop := SpawnTarget(SpawnLocation, LineProp, ?Scale := Scale)
-        if(Prop.TeleportTo[SpawnLocation,Prop.GetTransform().Rotation.ApplyYaw(Angle)]){}
+   
 
 (Edge1:tuple(Point,Point)).Equals(Edge2:tuple(Point,Point))<transacts><decides>: void=
     var IsEqual: logic = false
@@ -124,7 +108,7 @@ DelaunayTriangulation := class:
     BossCube : creative_prop_asset
 
     # Initialize by creating a super triangle
-    Initialize(points: []Point): void=
+    Initialize(points: []Point): []DelaunayTriangle=
         # Find bounds of all points (you might want to add some buffer or margin)
         Bounds:= CalculateBounds(points)
         MinX:= Bounds(0)
@@ -134,8 +118,8 @@ DelaunayTriangulation := class:
         MidX := (MinX + MaxX) / 2.0  # Calculate the midpoint along X
 
         Print("Bounds: {MinX}, {MaxX}, {MinY}, {MaxY}")
-        SpawnTarget(vector3{X:=MinX, Y:=MinY, Z:=50.0}, BossCube, ?Scale:=vector3{X:=4.0, Y:=4.0, Z:=4.0})
-        SpawnTarget(vector3{X:=MaxX, Y:=MaxY, Z:=50.0}, BossCube, ?Scale:=vector3{X:=4.0, Y:=4.0, Z:=4.0})
+        # SpawnTarget(vector3{X:=MinX, Y:=MinY, Z:=50.0}, BossCube, ?Scale:=vector3{X:=4.0, Y:=4.0, Z:=4.0})
+        # SpawnTarget(vector3{X:=MaxX, Y:=MaxY, Z:=50.0}, BossCube, ?Scale:=vector3{X:=4.0, Y:=4.0, Z:=4.0})
         # Create a super triangle
        # Create two triangles from the bounding box
         Triangle1 := CreateDelaunayTriangle(
@@ -153,15 +137,20 @@ DelaunayTriangulation := class:
 
         # Add triangles to the triangulation list
         set Triangles = array{Triangle1, Triangle2}
+        return Triangles
 
         
 
     # Main function to process all points
-    Triangulate(points: []Point): void=
+    Triangulate(points: []Point)<suspends>: []DelaunayTriangle=
         for(point :points):
             # Add each point to the triangulation
             AddPoint(point)
 
+        # Print("Drawing Triangles")
+        # for(I->triangle :Triangles):
+        #     triangle.Draw(LinePropAsset)
+        return Triangles
     
 
     # Add a point to the triangulation
@@ -250,9 +239,26 @@ DelaunayTriangulation := class:
                     flip_edge(edge, new_triangle, adjacent_triangle)
 
     # Helper function to check the Delaunay condition between two triangles
-    DelaunayCondition(triangle1: DelaunayTriangle, triangle2: DelaunayTriangle): logic=
-        # Implementation depends on checking circumcircles, omitted for brevity
-        return false
+    # Checks if the point P is inside the circumcircle of triangle ABC
+    IsPointInsideCircumcircle(A: Point, B: Point, C: Point, P: Point)<transacts>: logic =
+        Matrix := array{
+            array{A.X - P.X, A.Y - P.Y, (Pow(A.X, 2.0) + Pow(A.Y, 2.0)) - (Pow(P.X, 2.0) + Pow(P.Y, 2.0))},
+            array{B.X - P.X, B.Y - P.Y, (Pow(B.X, 2.0) + Pow(B.Y, 2.0)) - (Pow(P.X, 2.0) + Pow(P.Y, 2.0))},
+            array{C.X - P.X, C.Y - P.Y, (Pow(C.X, 2.0) + Pow(C.Y, 2.0)) - (Pow(P.X, 2.0) + Pow(P.Y, 2.0))}
+        }
+        Det := Determinant(Matrix)
+        if(Det>0.0):
+            return true
+        else:
+            return false
+
+    # Delaunay condition between two triangles
+    DelaunayCondition(triangle1: DelaunayTriangle, triangle2: DelaunayTriangle): logic =
+        for ( point : array{triangle2.A, triangle2.B, triangle2.C}):
+            if (IsPointInsideCircumcircle(triangle1.A, triangle1.B, triangle1.C, point)=true):
+                return false
+        return true
+
 
     # Helper function to find the adjacent triangle for a given edge
     find_adjacent_triangle(edge: tuple(Point, Point), calling_triangle: DelaunayTriangle)<transacts>: ?DelaunayTriangle=
@@ -315,10 +321,6 @@ DelaunayTriangulation := class:
         return (0.0, 0.0, 0.0, 0.0) 
 
         
-    DrawTriangles(): void=
-        Print("Drawing Triangles")
-        for(I->triangle :Triangles):
-            Print("Drawing Triangle {I}")
-            triangle.Draw(LinePropAsset)
+        
 
    

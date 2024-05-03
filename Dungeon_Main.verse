@@ -20,7 +20,7 @@ DungeonMain := class(creative_device):
         # dungeon := CreateDungeon(20, SpawnCube, CombatCube, BossCube, CorridorAsset)
         # dungeon.Generate()
        
-        Dungeon2:= CreateDungeonV2(15, 3, 6, 6, CombatCube, LinePropAsset, BossCube)
+        Dungeon2:= CreateDungeonV2(13, 3, 6, 10, CombatCube, LinePropAsset, BossCube)
         
 
         # Optionally, print out positions and other properties for debugging
