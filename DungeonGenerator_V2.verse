@@ -221,6 +221,16 @@ DungeonV2 := class():
     AddRoom(room:RoomV2): void =
         set Rooms += array{room}
 
+    # Helper function to calculate density of a proposed room area
+    CalculateAreaDensity(X: int, Y: int, RoomWidth: int, RoomHeight: int): int =
+        var count: int = 0
+        for (x := X - 4 .. X + RoomWidth + 4):
+            for (y := Y - 4 .. Y + RoomHeight + 4):
+                if (x >= 0 and x < Width and y >= 0 and y < Height):
+                    if (OccupancyGrid[x][y]= true):
+                        set count += 1
+        return count
+
     # Function to generate the dungeon
     Generate( MinRoomSize:int, MaxRoomSize:int, MinBuffer:int)<suspends>: void =
         InitOccupancyGrid()
@@ -233,6 +243,27 @@ DungeonV2 := class():
 
             var RoomWidth:int = GetRandomInt(MinRoomSize, MaxRoomSize)
             var RoomHeight:int = GetRandomInt(MinRoomSize, MaxRoomSize)
+            # # Find an unoccupied and less dense spot
+            # var BestSpot: tuple(int, int, int) = (-1, -1, 999999)  # (X, Y, Density)
+            # for (tryX := 5 .. Width - RoomWidth - 5):
+            #     for (tryY := 5 .. Height - RoomHeight - 5):
+            #         if (IsAreaFree(tryX, tryY, RoomWidth, RoomHeight, MinBuffer) = true ):
+                    
+            #             Density := CalculateAreaDensity(tryX, tryY, RoomWidth, RoomHeight)
+            #             if (Density < BestSpot(2)):
+            #                 Print("Found a better spot with density {Density}")
+            #                 set BestSpot = (tryX, tryY, Density)
+
+            # Print("Best spot: {BestSpot(0)}, {BestSpot(1)} with density {BestSpot(2)}")
+            # if (not BestSpot(0) = -1):  # Valid spot found
+            #     var NewRoom: RoomV2 = CreateRoomV2(BestSpot(0), BestSpot(1), RoomWidth, RoomHeight, "normal", Self)
+            #     if(HalfBuffer:=Floor(MinBuffer/2)):
+            #         MarkAreaOccupied(BestSpot(0), BestSpot(1), RoomWidth, RoomHeight, HalfBuffer)
+            #     AddRoom(NewRoom)
+            #     set RoomsCreated += 1
+            # else:
+            #     Print("No more space available for new rooms.")
+            #     break
 
             # Find an unoccupied spot
             var FoundSpot:logic = false
@@ -271,25 +302,30 @@ DungeonV2 := class():
     # Any additional functions needed for triangulation, MST, etc.
     InitOccupancyGrid(): void =
         for(I:=0..Width-1):
-            if(set OccupancyGrid[I] = array{}){}
+            set OccupancyGrid+= array{array{}}
             for(J:=0..Height-1):
-                if(set OccupancyGrid[I][J] = false){}
+                if(set OccupancyGrid[I] += array{false}){}
+        W:= OccupancyGrid.Length
+        Print("WIshto{W}")        
+        if( H:= OccupancyGrid[0].Length) :      
+            Print("Occupancy grid initialized with {W}x{H} dimensions.")
 
-     # Checks if the specified area is free
     # Checks if the specified area is free
     IsAreaFree(X:int, Y:int, _Width:int, _Height:int, Buffer:int)<transacts>: logic =
         # Adjust the bounds to include the buffer space
         StartX := Max(0, X - Buffer)
-        EndX := Min(_Width - 1 + X + Buffer, _Width - 1)
+        EndX := Min(X + _Width + Buffer, Width)  # Ensure it doesn't go out of the grid boundaries
         StartY := Max(0, Y - Buffer)
-        EndY := Min(_Height - 1 + Y + Buffer, _Height - 1)
+        EndY := Min(Y + _Height + Buffer, Height)  # Ensure it doesn't go out of the grid boundaries
 
         # Iterate over the adjusted area to check for free space
-        for (x := StartX.. EndX):
-            for (y := StartY.. EndY):
+        for (x := StartX .. EndX - 1):
+            for (y := StartY .. EndY - 1):
                 if (OccupancyGrid[x][y] = true):
+                    Print("Area is not free at {x}, {y}")
                     return false  # The area is not free
         return true  # The area is free
+
 
         
      # Marks the specified area as occupied
