@@ -9,14 +9,14 @@ using { /Fortnite.com/Game }
 using { /UnrealEngine.com/Temporary/UI }
 
 
-CreatePoint(X: float, Y: float): Point :=
+CreatePoint(X: int, Y: int)<transacts>: Point :=
     return Point{X:=X,Y:=Y, UUID:=GenerateUUID(), ID:=X+Y}
 
 Point := class:
     UUID: string
-    var X: float
-    var Y: float
-    ID: float 
+    var X: int
+    var Y: int
+    ID: int 
 
 
 CreateDelaunayTriangle(A: Point, B: Point, C: Point, LinePropAsset:creative_prop_asset): DelaunayTriangle :=
@@ -25,7 +25,7 @@ CreateDelaunayTriangle(A: Point, B: Point, C: Point, LinePropAsset:creative_prop
     return Triangle
     
 # Method to calculate the determinant of a 3x3 matrix
-Determinant(Matrix: [][]float)<transacts>: float=
+Determinant(Matrix: [][]int)<transacts>: int=
     if(Det:=
         Matrix[0][0] * (Matrix[1][1] * Matrix[2][2] - Matrix[1][2] * Matrix[2][1]) -
         Matrix[0][1] * (Matrix[1][0] * Matrix[2][2] - Matrix[1][2] * Matrix[2][0]) +
@@ -33,7 +33,7 @@ Determinant(Matrix: [][]float)<transacts>: float=
     ):
         return Det
     else:
-        return 0.0
+        return 0
 
 DelaunayTriangle := class:
     var A: Point
@@ -55,29 +55,27 @@ DelaunayTriangle := class:
     IsPointInside(P: Point)<transacts>: logic=
         # Compute the determinant of the matrix formed by the points
         Matrix := array{
-            array{A.X - P.X, A.Y - P.Y, (Pow(A.X,2.0) - Pow(P.X,2.0)) + (Pow(A.Y,2.0) - Pow(P.Y,2.0))},
-            array{B.X - P.X, B.Y - P.Y, (Pow(B.X,2.0) - Pow(P.X,2.0)) + (Pow(B.Y,2.0) - Pow(P.Y,2.0))},
-            array{C.X - P.X, C.Y - P.Y, (Pow(C.X,2.0) - Pow(P.X,2.0)) + (Pow(C.Y,2.0) - Pow(P.Y,2.0))}
+            array{A.X - P.X, A.Y - P.Y, (A.X - P.X) * (A.X - P.X) + (A.Y - P.Y) * (A.Y - P.Y)},
+            array{B.X - P.X, B.Y - P.Y, (B.X - P.X) * (B.X - P.X) + (B.Y - P.Y) * (B.Y - P.Y)},
+            array{C.X - P.X, C.Y - P.Y, (C.X - P.X) * (C.X - P.X) + (C.Y - P.Y) * (C.Y - P.Y)}
         }
-        # Calculate the determinant
         Det := Determinant(Matrix)
-        # Print("Determinant for Point {P.X}, {P.Y} with Triangle {A.X}, {A.Y}, {B.X}, {B.Y}, {C.X}, {C.Y} is {Det}")
 
         # If the determinant is greater than zero, P is inside the circumcircle (for CCW orientation)
-        if(Det>0.0):
+        if(Det>0):
             return true
         else:
             return false
 
     
     ## Method to draw the triangle edges as lines in the game world
-    Draw(LineProp: creative_prop_asset)<suspends>: void=
-        # Draw line from A to B
-        DrawLine(A, B, LineProp)
-        # Draw line from B to C
-        DrawLine(B, C, LineProp)
-        # Draw line from C to A
-        DrawLine(C, A, LineProp)
+    # Draw(LineProp: creative_prop_asset)<suspends>: void=
+    #     # Draw line from A to B
+    #     DrawLine(A, B, LineProp)
+    #     # Draw line from B to C
+    #     DrawLine(B, C, LineProp)
+    #     # Draw line from C to A
+    #     DrawLine(C, A, LineProp)
 
    
 
@@ -115,7 +113,6 @@ DelaunayTriangulation := class:
         MaxX:= Bounds(1)
         MinY := Bounds(2)
         MaxY  := Bounds(3)
-        MidX := (MinX + MaxX) / 2.0  # Calculate the midpoint along X
 
         Print("Bounds: {MinX}, {MaxX}, {MinY}, {MaxY}")
         # SpawnTarget(vector3{X:=MinX, Y:=MinY, Z:=50.0}, BossCube, ?Scale:=vector3{X:=4.0, Y:=4.0, Z:=4.0})
@@ -242,12 +239,12 @@ DelaunayTriangulation := class:
     # Checks if the point P is inside the circumcircle of triangle ABC
     IsPointInsideCircumcircle(A: Point, B: Point, C: Point, P: Point)<transacts>: logic =
         Matrix := array{
-            array{A.X - P.X, A.Y - P.Y, (Pow(A.X, 2.0) + Pow(A.Y, 2.0)) - (Pow(P.X, 2.0) + Pow(P.Y, 2.0))},
-            array{B.X - P.X, B.Y - P.Y, (Pow(B.X, 2.0) + Pow(B.Y, 2.0)) - (Pow(P.X, 2.0) + Pow(P.Y, 2.0))},
-            array{C.X - P.X, C.Y - P.Y, (Pow(C.X, 2.0) + Pow(C.Y, 2.0)) - (Pow(P.X, 2.0) + Pow(P.Y, 2.0))}
+            array{A.X - P.X, A.Y - P.Y, (A.X - P.X) * (A.X - P.X) + (A.Y - P.Y) * (A.Y - P.Y)},
+            array{B.X - P.X, B.Y - P.Y, (B.X - P.X) * (B.X - P.X) + (B.Y - P.Y) * (B.Y - P.Y)},
+            array{C.X - P.X, C.Y - P.Y, (C.X - P.X) * (C.X - P.X) + (C.Y - P.Y) * (C.Y - P.Y)}
         }
         Det := Determinant(Matrix)
-        if(Det>0.0):
+        if(Det>0):
             return true
         else:
             return false
@@ -290,21 +287,21 @@ DelaunayTriangulation := class:
         return true
 
     # Helper function to calculate the bounds of a set of points
-    CalculateBounds(points: []Point): tuple(float, float, float, float)=
+    CalculateBounds(points: []Point): tuple(int, int, int, int)=
         if(points.Length = 0):
-            return (0.0, 0.0, 0.0, 0.0)  # Return default bounds if no points are provided
+            return (0, 0, 0, 0)  # Return default bounds if no points are provided
     
         if(
-            MinX: float = points[0].X,
-            MaxX: float = points[0].X,
-            MinY: float = points[0].Y,
-            MaxY: float = points[0].Y
+            MinX:= points[0].X,
+            MaxX:= points[0].X,
+            MinY:= points[0].Y,
+            MaxY:= points[0].Y
             ):
                 #create variables to store the minimum and maximum bounds
-                var TempMinX: float = MinX
-                var TempMaxX: float = MaxX
-                var TempMinY: float = MinY
-                var TempMaxY: float = MaxY
+                var TempMinX: int = MinX
+                var TempMaxX: int = MaxX
+                var TempMinY: int = MinY
+                var TempMaxY: int = MaxY
     
                 for(point :points):
                     if(point.X < TempMinX):
@@ -318,7 +315,7 @@ DelaunayTriangulation := class:
             
                 # Return an array containing the minimum and maximum bounds
                 return (TempMinX, TempMaxX, TempMinY, TempMaxY)
-        return (0.0, 0.0, 0.0, 0.0) 
+        return (0, 0, 0, 0) 
 
         
         

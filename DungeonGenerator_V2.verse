@@ -15,37 +15,54 @@ CreateRoomV2(X:int, Y:int, Width:int, Height:int, Type:string, Parent:DungeonV2)
     room.Init()
     return room
 
-CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset, BossCube:creative_prop_asset,DebugCube:creative_prop_asset,    DebugLinePropAsset: creative_prop_asset
+CreateDungeonV2(PreferredRooms:int, MinRoomSize:int, MaxRoomSize:int, MinBuffer:int, CombatCube : creative_prop_asset, LinePropAsset:creative_prop_asset, BossCube:creative_prop_asset,DebugCube:creative_prop_asset,    
+DebugLinePropAsset: creative_prop_asset,     AStarLinePropAsset:creative_prop_asset
 ): DungeonV2 =
     # Implementation to create a dungeon
-    dungeon:= DungeonV2{Width:=100, Height:=100, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, LinePropAsset:=LinePropAsset, BossCube:=BossCube, DebugCube:=DebugCube, DebugLinePropAsset:=DebugLinePropAsset}
+    dungeon:= DungeonV2{Width:=75, Height:=75, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, 
+    LinePropAsset:=LinePropAsset, BossCube:=BossCube, DebugCube:=DebugCube, DebugLinePropAsset:=DebugLinePropAsset, AStarLinePropAsset:=AStarLinePropAsset}
     spawn. dungeon.Generate(MinRoomSize, MaxRoomSize, MinBuffer)
     return dungeon
 
 
- # Helper function to draw a line between two points using a specified prop asset
-DrawLine(Start: Point, End: Point, LineProp: creative_prop_asset)<suspends>: void=
-    # Calculate midpoint for the line prop
-    MidPointX := (Start.X + End.X) / 2.0
-    MidPointY := (Start.Y + End.Y) / 2.0
-    MidPointZ := 50.0  # Assuming a fixed height above ground
-    SpawnLocation := vector3{X:=MidPointX, Y:=MidPointY, Z:=MidPointZ}
+# Function to draw a line between any two grid points
+DrawGridLine(Start: Point, End: Point, LineProp: creative_prop_asset, ParentDungeon:DungeonV2, ?Z:float=50.0)<suspends>: void=
+    # Creating local copies of Start and End to avoid modifying the original points
+    var LocalStart: Point = Start
+    var LocalEnd: Point = End
+    dx := Abs(LocalEnd.X - LocalStart.X)
+    dy := -Abs(LocalEnd.Y - LocalStart.Y)
+    var sx:int = 0
+    var sy:int = 0
+    if(Start.X < End.X):
+        set sx = 1
+    else:
+        set sx = -1
 
-    # Calculate the distance between the points to set the scale of the line prop
-    LineLength := Sqrt(Pow(Abs(End.X - Start.X), 2.0) + Pow(Abs(End.Y - Start.Y), 2.0))
-    
-    
-    var Scale :vector3= vector3{X:=LineLength / 40.0, Y:=0.1, Z:=0.1}  # Adjust Y and Z for thickness
-    if(LineLength>0.1):
+    if(Start.Y < End.Y):
+        set sy = 1
+    else:
+        set sy = -1
+    var err: int = dx + dy
 
-        # Calculate the angle to rotate the line prop
-        Angle := ArcTan(End.Y - Start.Y, End.X - Start.X)
-        Rotation := MakeRotationFromYawPitchRollDegrees( RadiansToDegrees(Angle), 0.0, 0.0)
+    loop:
+        Sleep(1.0/26.0)
+        # Calculate spawn location based on the current LocalStart position
+        SpawnLocation := vector3{X:=LocalStart.X * 100.0, Y:=LocalStart.Y * 100.0, Z:=Z}
+        Scale := vector3{X:=1.0, Y:=1.0, Z:=1.0}
+        Prop := SpawnTarget(SpawnLocation, LineProp, ?Scale:=Scale)
+        
+        if (LocalStart.X = LocalEnd.X and LocalStart.Y = LocalEnd.Y):
+            break
+        var e2 :int= 2 * err
+        if (e2 >= dy): # e_xy+e_x > 0
+            set err += dy
+            set LocalStart.X += sx
+        if (e2 <= dx): # e_xy+e_y < 0
+            set err += dx
+            set LocalStart.Y += sy
 
-        # Spawn the line prop at the calculated location with the appropriate rotation and scale
-        Prop := SpawnTarget(SpawnLocation, LineProp, ?Scale := Scale)
-        Sleep(0.005)
-        if(Prop.TeleportTo[SpawnLocation,Prop.GetTransform().Rotation.ApplyYaw(Angle)]){}    
+
 RoomV2 := class():
     # Unique identifier for the room
     var ID: string 
@@ -72,6 +89,8 @@ RoomV2 := class():
 
     var MiddleLocation: vector3 = vector3{X:=0.0, Y:=0.0, Z:=0.0}
 
+    var ConnectX:int =0
+    var ConnectY:int =0
     Init()<suspends>:void=
         for(i := 0..Width):
             for(j := 0..Height):
@@ -83,7 +102,9 @@ RoomV2 := class():
                 set Props += array{Prop}
 
         # Calculate the middle location of the room
-        set MiddleLocation = vector3{X:=(X*1.0 + Width*1.0 / 2.0) * 100.0, Y:=(Y*1.0 + Height*1.0 / 2.0) * 100.0, Z:=50.0}
+        set MiddleLocation = vector3{X:=(X*1.0 + Width*1.0 / 2.0) * 100.0, Y:= Y*100.0, Z:=50.0}
+        if(set ConnectX = X + Floor(Width/2)){}
+        set ConnectY = Y
 
 
         # Implementation to initialize the room
@@ -97,7 +118,7 @@ DungeonV2 := class():
     BossCube : creative_prop_asset
     DebugCube: creative_prop_asset
     DebugLinePropAsset: creative_prop_asset
-
+    AStarLinePropAsset:creative_prop_asset
     var OccupancyGrid: [][]logic = array{}
 
     # List of all rooms in the dungeon
@@ -121,7 +142,7 @@ DungeonV2 := class():
         var Points: []Point = array{}
         for(room :Rooms):
             Location:= vector2{X:=room.MiddleLocation.X, Y:=room.MiddleLocation.Y}
-            set Points += array{CreatePoint(Location.X, Location.Y)}
+            set Points += array{CreatePoint(room.ConnectX, room.ConnectY)}
             SpawnTarget(vector3{X:=Location.X, Y:=Location.Y, Z:=100.0},BossCube)
 
         # Initialize the Delaunay triangulation with these points
@@ -151,16 +172,48 @@ DungeonV2 := class():
         set Edges = array{}
         for(Key->Value: UniqueEdges):
             set Edges+= array{Value}
-            DrawLine(Value(0), Value(1), LinePropAsset)
 
         # Create a minimum spanning tree from the triangulation
         var MST :[]Edge= KruskalMST(Points, Edges)  # Ensure LinePropAsset is defined or passed appropriately 
         Print("edges: {Edges.Length}, mst: {MST.Length}")       
-        
+        var MSTMap: [string]logic = map{}
+        for(edge : MST):
+            MSTKey := "{edge.Point1.UUID}-{edge.Point2.UUID}"
+            if(set MSTMap[MSTKey] = true,
+            set MSTMap["{edge.Point2.UUID}-{edge.Point1.UUID}"] = true){}  # For undirected edges
 
+
+        for(Key->Value : UniqueEdges):
+            if (not MSTMap[Key]):  # Check if the edge is not in the MST
+                if (GetRandomFloat(0.0,1.0) < 0.125):
+                    set MST += array{CreateEdge(Value(0), Value(1))}
+
+        Print("total mst with random edges: {MST.Length}")
         for(edge:MST):
-            Print("Drawing edge")
-            DrawLine(edge.Point1, edge.Point2, DebugLinePropAsset)
+            Print("Drawing MST")
+            DrawGridLine(edge.Point1, edge.Point2, DebugLinePropAsset, Self, ?Z:=75.0)
+
+
+        
+        # pathfinder := AStarContinuous{}
+        # pathfinder.Init(MST)
+        # Print("Pathfinder initialized")
+        # Print("Points: {Points.Length}")
+        # # Assuming start and goal are defined, for example:
+        # if( start := Points[0]  # or a specific point based on your logic
+        #     goal := Points[1]):  # or another specific point
+        #         Print("Start and goal points found")
+        #         # Find path using A*
+        #         path := pathfinder.Search(start, goal)
+        #         for(point : path(0)):
+        #             Print("Drawing path")
+        #             # Optionally, draw or process path points
+        #             if(Origins:=path(1)[point.UUID]):
+        #                 Print("origin found")
+        #                 DrawLine(point, Origins , AStarLinePropAsset)
+
+        # Print or visualize the path
+       
 
 
 
@@ -192,8 +245,8 @@ DungeonV2 := class():
                 if(attempts > 100):
                     break
                 set attempts += 1
-                set RoomX = GetRandomInt(0, Width - RoomWidth)
-                set RoomY = GetRandomInt(0, Height - RoomHeight)
+                set RoomX = GetRandomInt(5, Width - RoomWidth-2)
+                set RoomY = GetRandomInt(5, Height - RoomHeight-2)
 
                 if(IsAreaFree(RoomX, RoomY, RoomWidth, RoomHeight, MinBuffer) = true):
                     set FoundSpot = true

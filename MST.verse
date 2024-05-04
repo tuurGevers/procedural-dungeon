@@ -22,7 +22,7 @@ Edge := class:
     var Weight: float = 0.0
 
     Init():void=
-        set Weight = Sqrt(Pow((Point1.X - Point2.X),2.0) + Pow((Point1.Y - Point2.Y),2.0))
+        set Weight = Sqrt(Pow((Point1.X*1.0 - Point2.X*1.0),2.0) + Pow((Point1.Y*1.0 - Point2.Y*1.0),2.0))
 
     #Print():void=
         #Print("Edge: , {Point1.X}- {Point1.Y},  -> , {Point2.X}-{Point2.Y},  Weight: , {Weight}")

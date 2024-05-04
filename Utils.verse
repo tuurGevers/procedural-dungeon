@@ -177,7 +177,8 @@ SpawnTarget(Position:vector3, Prop: creative_prop_asset, ?Scale:vector3 = vector
     var LocalProp:creative_prop = creative_prop{}
     if (SpawnedProp := SpawnProp(Prop, transform{Translation:=Position, Rotation:= Rotation, Scale:=Scale})(0)?):
         set LocalProp =SpawnedProp
-
+    else:
+        Print("Failed to spawn prop")
     return LocalProp
 
 # Removes a visual effect with an optional delay
@@ -198,7 +199,7 @@ Spawnable_slime_adio:=class(tag){}
     IsBetween = true
 
 # Generates a random UUID
-GenerateUUID():string=
+GenerateUUID()<transacts>:string=
     Chars:[]char = {'I', 'e', '9', 'm', 'P', 'T', 'b', '0', 'W', 'M', 'Z', 'T', 'T', 'H', 'I', '9', 'E', 'j', 'p', 'i', 'p', 'D', 'b', 'G', 'o', 'f', 'o', 'e', 'U', '7', 'A', 'U', 'G', 'E', 'L', 'p', '8', 'Q', 'q', 'l', 'z', 'k', 'H', '0', 'T', '9', 'r', 'H', 'w', 'f'}
 
     var UUID:string = ""
@@ -489,3 +490,14 @@ SortFunction(Element1: int, Element2: int)<transacts>: int =
 
 (Input:[]t where t:type).Reverse()<computes>:[]t=
     for (Index -> Unused : Input, Element := Input[Input.Length - Index - 1]). Element
+
+
+(Input:[]t where t:type).Get(Index:int, Default:t)<computes>:t=
+    if(Element:= Input[Index]):
+        return Element
+    return Default
+
+(Input:[string]t where t:type).Get(Key:string, Default:t)<computes>:t=
+    if(Element:= Input[Key]):
+        return Element
+    return Default
