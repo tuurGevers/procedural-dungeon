@@ -26,7 +26,7 @@ DebugLinePropAsset: creative_prop_asset,     AStarLinePropAsset:creative_prop_as
 
 
 # Function to draw a line between any two grid points
-DrawGridLine(Start: Point, End: Point, LineProp: creative_prop_asset, ParentDungeon:DungeonV2, ?Z:float=50.0)<suspends>: void=
+DrawGridLine(Start: Point, End: Point, LineProp: creative_prop_asset, ParentDungeon:DungeonV2, ?Z:float=50.0, ?Value:int=1, ?ShouldSpawn:logic=true)<suspends>: void=
     # Creating local copies of Start and End to avoid modifying the original points
     var LocalStart: Point = Start
     var LocalEnd: Point = End
@@ -46,12 +46,14 @@ DrawGridLine(Start: Point, End: Point, LineProp: creative_prop_asset, ParentDung
     var err: int = dx + dy
 
     loop:
-        Sleep(1.0/26.0)
         # Calculate spawn location based on the current LocalStart position
         SpawnLocation := vector3{X:=LocalStart.X * 100.0, Y:=LocalStart.Y * 100.0, Z:=Z}
         Scale := vector3{X:=1.0, Y:=1.0, Z:=1.0}
-        Prop := SpawnTarget(SpawnLocation, LineProp, ?Scale:=Scale)
-        
+        if(ParentDungeon.OccupancyGrid[LocalStart.X][LocalStart.Y] = 0 or ParentDungeon.OccupancyGrid[LocalStart.X][LocalStart.Y] = 9 or ParentDungeon.OccupancyGrid[LocalStart.X][LocalStart.Y] = 1 ):
+            if(ShouldSpawn=true):
+                Sleep(1.0/26.0)
+                Prop := SpawnTarget(SpawnLocation, LineProp, ?Scale:=Scale)
+            if(set ParentDungeon.OccupancyGrid[LocalStart.X][LocalStart.Y] = Value){}
         if (LocalStart.X = LocalEnd.X and LocalStart.Y = LocalEnd.Y):
             break
         var e2 :int= 2 * err
@@ -119,7 +121,7 @@ DungeonV2 := class():
     DebugCube: creative_prop_asset
     DebugLinePropAsset: creative_prop_asset
     AStarLinePropAsset:creative_prop_asset
-    var OccupancyGrid: [][]logic = array{}
+    var OccupancyGrid: [][]int = array{}
 
     # List of all rooms in the dungeon
     var Rooms: []RoomV2 = array{}
@@ -195,24 +197,36 @@ DungeonV2 := class():
 
 
         
-        # pathfinder := AStarContinuous{}
-        # pathfinder.Init(MST)
+        # pathfinder := AStarContinuous{GridWidth:=Width, GridHeight:=Height, DebugCube:=BossCube}
+        # var Buffer:int = 0
+        # for(I:OccupancyGrid):
+        #     for(J:I):
+        #         if(J = 9):
+        #             set Buffer+=1
+        # Print("Buffer tiles left: {Buffer}")
+        # pathfinder.Init(MST, OccupancyGrid)
         # Print("Pathfinder initialized")
         # Print("Points: {Points.Length}")
-        # # Assuming start and goal are defined, for example:
-        # if( start := Points[0]  # or a specific point based on your logic
-        #     goal := Points[1]):  # or another specific point
-        #         Print("Start and goal points found")
-        #         # Find path using A*
-        #         path := pathfinder.Search(start, goal)
-        #         for(point : path(0)):
-        #             Print("Drawing path")
-        #             # Optionally, draw or process path points
-        #             if(Origins:=path(1)[point.UUID]):
-        #                 Print("origin found")
-        #                 DrawLine(point, Origins , AStarLinePropAsset)
+        # for(I:= 0.. Points.Length-1):
 
-        # Print or visualize the path
+        # # Assuming start and goal are defined, for example:
+        # for (edge : MST):
+        #     start_room_center := edge.Point1  # Assume Points is a list of room center positions indexed by point IDs
+        #     end_room_center := edge.Point2
+
+        #         # Perform A* search between the centers of the connected rooms
+        #         path := pathfinder.Search(start_room_center, end_room_center)
+        #         for(point:path(0)):
+        #             Print("Path point: {point.X}, {point.Y}")
+
+        #         # Draw the path using a corridor visual
+        #         if (path(0).Length>0):
+        #             var last_point :Point= start_room_center
+        #             for (point : path(0)):
+        #                 DrawGridLine(last_point, point, LinePropAsset, Self, ?Z:=50.0, ?Value:=3)  # Assume LinePropAsset is suitable for corridors
+        #                 set last_point = point
+        #             DrawGridLine(last_point, end_room_center, LinePropAsset, Self, ?Z:=50.0, ?Value:=3)
+
        
 
 
@@ -227,7 +241,7 @@ DungeonV2 := class():
         for (x := X - 4 .. X + RoomWidth + 4):
             for (y := Y - 4 .. Y + RoomHeight + 4):
                 if (x >= 0 and x < Width and y >= 0 and y < Height):
-                    if (OccupancyGrid[x][y]= true):
+                    if (OccupancyGrid[x][y]= 1):
                         set count += 1
         return count
 
@@ -243,27 +257,6 @@ DungeonV2 := class():
 
             var RoomWidth:int = GetRandomInt(MinRoomSize, MaxRoomSize)
             var RoomHeight:int = GetRandomInt(MinRoomSize, MaxRoomSize)
-            # # Find an unoccupied and less dense spot
-            # var BestSpot: tuple(int, int, int) = (-1, -1, 999999)  # (X, Y, Density)
-            # for (tryX := 5 .. Width - RoomWidth - 5):
-            #     for (tryY := 5 .. Height - RoomHeight - 5):
-            #         if (IsAreaFree(tryX, tryY, RoomWidth, RoomHeight, MinBuffer) = true ):
-                    
-            #             Density := CalculateAreaDensity(tryX, tryY, RoomWidth, RoomHeight)
-            #             if (Density < BestSpot(2)):
-            #                 Print("Found a better spot with density {Density}")
-            #                 set BestSpot = (tryX, tryY, Density)
-
-            # Print("Best spot: {BestSpot(0)}, {BestSpot(1)} with density {BestSpot(2)}")
-            # if (not BestSpot(0) = -1):  # Valid spot found
-            #     var NewRoom: RoomV2 = CreateRoomV2(BestSpot(0), BestSpot(1), RoomWidth, RoomHeight, "normal", Self)
-            #     if(HalfBuffer:=Floor(MinBuffer/2)):
-            #         MarkAreaOccupied(BestSpot(0), BestSpot(1), RoomWidth, RoomHeight, HalfBuffer)
-            #     AddRoom(NewRoom)
-            #     set RoomsCreated += 1
-            # else:
-            #     Print("No more space available for new rooms.")
-            #     break
 
             # Find an unoccupied spot
             var FoundSpot:logic = false
@@ -286,7 +279,7 @@ DungeonV2 := class():
             if(FoundSpot= true):
                 var NewRoom:RoomV2 = CreateRoomV2(RoomX, RoomY, RoomWidth, RoomHeight, "normal", Self)
                 if(HalfBuffer:=Floor(MinBuffer/2)):
-                    MarkAreaOccupied(RoomX, RoomY, RoomWidth, RoomHeight,HalfBuffer)
+                    MarkAreaOccupied(RoomX, RoomY, RoomWidth, RoomHeight,HalfBuffer, 5)
                     AddRoom(NewRoom)
                     set RoomsCreated += 1
             else:
@@ -294,6 +287,13 @@ DungeonV2 := class():
                 break
 
         Print("Dungeon generation complete. Created {RoomsCreated} rooms. Starting triangulation.")
+        for(indexI->I:OccupancyGrid):
+            for(indexJ->J:I):
+                if(J = 9):
+                    if(set OccupancyGrid[indexI][indexJ]= 0){}
+
+        for(room:Rooms):
+            Print("Room {room.ID} at {room.X}, {room.Y} with width {room.Width} and height {room.Height}.")
         TriangulateRooms()
         Print("Triangulation complete.")
 
@@ -304,7 +304,7 @@ DungeonV2 := class():
         for(I:=0..Width-1):
             set OccupancyGrid+= array{array{}}
             for(J:=0..Height-1):
-                if(set OccupancyGrid[I] += array{false}){}
+                if(set OccupancyGrid[I] += array{0}){}
         W:= OccupancyGrid.Length
         Print("WIshto{W}")        
         if( H:= OccupancyGrid[0].Length) :      
@@ -321,7 +321,7 @@ DungeonV2 := class():
         # Iterate over the adjusted area to check for free space
         for (x := StartX .. EndX - 1):
             for (y := StartY .. EndY - 1):
-                if (OccupancyGrid[x][y] = true):
+                if (not OccupancyGrid[x][y] = 0):
                     Print("Area is not free at {x}, {y}")
                     return false  # The area is not free
         return true  # The area is free
@@ -329,12 +329,17 @@ DungeonV2 := class():
 
         
      # Marks the specified area as occupied
-    MarkAreaOccupied(X:int, Y:int, _Width:int, _Height:int, HalfBuffer:int): void =
+    MarkAreaOccupied(X:int, Y:int, _Width:int, _Height:int, HalfBuffer:int, Value: int): void =
         for (x := X-HalfBuffer..X + _Width+HalfBuffer):
             for (y := Y-HalfBuffer..Y + _Height+HalfBuffer):
-                if(set OccupancyGrid[x][y] = true){}
-                # Calculate position for each grid cell
-                Spawn:= vector3{X:=x*100.0, Y:=y*100.0, Z:=75.0}  # Adjusted to use x and y
-                # Spawn a transparent debug cube at calculated position
-                # Prop:=SpawnTarget(Spawn, DebugCube)
+                
+                if(set OccupancyGrid[x][y] = 9){}
+
+        for(x:=X..X+_Width):
+            for(y:=Y..Y+_Height):
+                if(set OccupancyGrid[x][y] = Value){}
+                # # Calculate position for each grid cell
+                # Spawn:= vector3{X:=x*100.0, Y:=y*100.0, Z:=75.0}  # Adjusted to use x and y
+                # # Spawn a transparent debug cube at calculated position
+                # # Prop:=SpawnTarget(Spawn, DebugCube)
 

@@ -108,7 +108,7 @@ DelaunayTriangulation := class:
     # Initialize by creating a super triangle
     Initialize(points: []Point): []DelaunayTriangle=
         # Find bounds of all points (you might want to add some buffer or margin)
-        Bounds:= CalculateBounds(points)
+        Bounds:= CalculateBounds(array{CreatePoint(0, 0), CreatePoint(74, 74)})
         MinX:= Bounds(0)
         MaxX:= Bounds(1)
         MinY := Bounds(2)

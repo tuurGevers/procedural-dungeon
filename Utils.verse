@@ -501,3 +501,9 @@ SortFunction(Element1: int, Element2: int)<transacts>: int =
     if(Element:= Input[Key]):
         return Element
     return Default
+
+(Input:[string]t where t:type).ContainsKey(KeyToCheck:string)<transacts>:logic=
+    for(Key->Value:Input):
+        if(Key = KeyToCheck):
+            return true
+    return false
