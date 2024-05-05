@@ -2,19 +2,6 @@ using { /Verse.org/Simulation }
 using { /Fortnite.com/Devices }
 using { /UnrealEngine.com/Temporary/SpatialMath }
 
-(Points: []Point).Contains(point: Point)<transacts>: logic=
-    for(p: Points):
-        if(p.UUID = point.UUID):
-            return true
-    return false
-
-(Points: []Point).RemovePoint(P:Point): []Point=
-    var result: []Point = array{}
-    for(p: Points):
-        if(not p.UUID = P.UUID):
-            set result += array{p}
-    return result
-
 # Updated A* for weighted pathfinding
 AStarContinuous := class:
     var Edges: []Edge = array{}

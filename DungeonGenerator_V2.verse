@@ -235,15 +235,6 @@ DungeonV2 := class():
     AddRoom(room:RoomV2): void =
         set Rooms += array{room}
 
-    # Helper function to calculate density of a proposed room area
-    CalculateAreaDensity(X: int, Y: int, RoomWidth: int, RoomHeight: int): int =
-        var count: int = 0
-        for (x := X - 4 .. X + RoomWidth + 4):
-            for (y := Y - 4 .. Y + RoomHeight + 4):
-                if (x >= 0 and x < Width and y >= 0 and y < Height):
-                    if (OccupancyGrid[x][y]= 1):
-                        set count += 1
-        return count
 
     # Function to generate the dungeon
     Generate( MinRoomSize:int, MaxRoomSize:int, MinBuffer:int)<suspends>: void =
