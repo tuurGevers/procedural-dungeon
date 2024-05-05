@@ -49,7 +49,6 @@ RoomV3:=class:
     Init()<suspends>:void=
         for(i := 0..Width):
             for(j := 0..Height):
-                Sleep(0.003)
                 # Print("Spawning tile at {X*1.0+i*100.0}, {Y*1.0+j*100.0}, 50.0")
                 Spawn:= vector3{X:=(X+i)*100.0, Y:=(Y+j)*100.0, Z:=50.0}
                 # Spawn a floor tile at the given position
@@ -210,11 +209,14 @@ DungeonV3:= class:
 
         var AIndex:int = 0
         loop:
-            set AIndex+=1
             if(MSTEdge:=MSTEdges[AIndex]):
                 spawn. AStarAsync(MSTEdge, AStar)
                 if(MSTEdge2 := MSTEdges[AIndex+1]):
-                    AStarAsync(MSTEdge2, AStar)
+                    spawn. AStarAsync(MSTEdge2, AStar)
+                if(MSTEdge3 := MSTEdges[AIndex+2]):
+                    AStarAsync(MSTEdge3, AStar)
+
+            set AIndex+=3
 
             if(AIndex>= MSTEdges.Length):
                 break
