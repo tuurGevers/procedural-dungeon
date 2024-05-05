@@ -45,9 +45,8 @@ AStarContinuous := class:
 
         var gScore: [string]float = map{start.UUID=> 0.0}
         var fScore: [string]float = map{start.UUID=> Heuristic(start, goal)}
-        var SpawnedCubes: []creative_prop = array{}
+        # var SpawnedCubes: []creative_prop = array{}
         loop:
-            Sleep(1.0/20.0)
             Print("Open set length: {openSet.Length}")
 
             if(openSet.Length < 0):
@@ -59,8 +58,8 @@ AStarContinuous := class:
 
                 if(current.UUID = goal.UUID):
                     Print("Path found")
-                    for(cube: SpawnedCubes):
-                        cube.Dispose()
+                    # for(cube: SpawnedCubes):
+                    #     cube.Dispose()
                     return (ReconstructPath(cameFrom, current), cameFrom)
 
                 set openSet = openSet.RemovePoint(current)
@@ -78,7 +77,7 @@ AStarContinuous := class:
                             ):
                                 Print("Adding neighbor to open set with length {neighbor.X} {neighbor.Y} {openSet.Length}")
                                 SpawnLocation := vector3{X:=neighbor.X * 100.0, Y:=neighbor.Y * 100.0, Z:=75.0}
-                                set SpawnedCubes += array{SpawnTarget(SpawnLocation, DebugCube)}
+                                # set SpawnedCubes += array{SpawnTarget(SpawnLocation, DebugCube)}
                                 if(not openSet.Contains(neighbor) = true):
                                     set openSet += array{neighbor}
             else:
