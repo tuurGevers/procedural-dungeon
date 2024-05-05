@@ -60,7 +60,7 @@ AStarV2 := class:
 
         loop:
             Sleep(1.0 / 20.0)
-            Print("Open set length: {openSet.Length}")
+            # Print("Open set length: {openSet.Length}")
 
             if(openSet.Length = 0):
                 break
@@ -71,7 +71,7 @@ AStarV2 := class:
 
                 # Check goal by comparing coordinates
                 if(current.X = goal.X and current.Y = goal.Y):
-                    Print("Path found to goal at {goal.X}, {goal.Y}")
+                    # Print("Path found to goal at {goal.X}, {goal.Y}")
                     for(cube: SpawnedCubes):
                         cube.Dispose()
                     return (FilterPath(ReconstructPath(cameFrom, current), StartRoomX, StartRoomY, StartRoomWidth, StartRoomHeight, EndRoomX, EndRoomY, EndRoomWidth, EndRoomHeight), cameFrom)
@@ -92,7 +92,7 @@ AStarV2 := class:
                                     set fScore[neighbor.UUID] = tentativeGScore + Heuristic(neighbor, goal)
                                 ):
                                     if(not openSet.Contains(neighbor) = true):
-                                        Print("Adding neighbor to open set at {neighbor.X} {neighbor.Y}, open set length: {openSet.Length}")
+                                        # Print("Adding neighbor to open set at {neighbor.X} {neighbor.Y}, open set length: {openSet.Length}")
                                         SpawnLocation := vector3{X := neighbor.X * 100.0, Y := neighbor.Y * 100.0, Z := 75.0}
                                         set SpawnedCubes += array{SpawnTarget(SpawnLocation, DebugCube)}
                                         set openSet += array{neighbor}
@@ -108,8 +108,6 @@ AStarV2 := class:
         var totalPath: []Point = array{current}
         var LocalCurrent: Point = current
         loop:
-            Sleep(1.0 / 29.0)
-            Print("Reconstructing path")
             if(cameFrom.ContainsKey(LocalCurrent.UUID) = false):
                 break
             if(set LocalCurrent = cameFrom[LocalCurrent.UUID]):

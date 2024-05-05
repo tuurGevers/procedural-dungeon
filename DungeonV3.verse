@@ -85,6 +85,13 @@ DungeonV3:= class:
      AddRoom(room:RoomV3): void =
         set Rooms += array{room}
 
+    #
+    # Function to sort edge points by ID to ensure consistency
+    SortEdgePoints(edge: tuple(Point, Point)): tuple(Point, Point) =
+        if (edge(0).UUID.GetIntValue() < edge(1).UUID.GetIntValue()):
+            return (edge(0), edge(1))
+        else:
+            return (edge(1), edge(0))
 
     # Function to generate the dungeon
     Generate( MinRoomSize:int, MaxRoomSize:int, MinBuffer:int)<suspends>: void =
@@ -145,17 +152,79 @@ DungeonV3:= class:
             if(EntryPoint := CreatePoint(room.X + Floor(room.Width / 2), room.Y +Floor( room.Height / 2))):
                 set RoomEntryPoints += array{EntryPoint}
 
-        # Create all pairs for MST edges
-        for(i := 0 .. RoomEntryPoints.Length - 1):
+       
+
+        ###
+        # Initialize the Delaunay triangulation with these points
+        Triangulation := DelaunayTriangulation{LinePropAsset:= LinePropAsset, BossCube:=BossCube}  # Ensure LinePropAsset is defined or passed appropriately
+        StartingTriangles:= Triangulation.Initialize(RoomEntryPoints)
+
+        # Perform the triangulation
+        Triangles := Triangulation.Triangulate(RoomEntryPoints)
+
+        var Edges: []tuple(Point,Point) = array{}
+        for(triangle :Triangles):
+            for(edge:triangle.Edges):
+                set Edges += array{edge}
+
+        var UniqueEdges :[string]tuple(Point,Point)= map{}
+        for (edge : Edges):
+            var ShouldSkip:logic = false
+            sortedEdge := SortEdgePoints(edge)
+            for(T:StartingTriangles):
+                for(TEdge: T.Edges):
+                    if((TEdge(0).X = edge(0).X and TEdge(0).Y = edge(0).Y) or (TEdge(1).X = edge(1).X and TEdge(1).Y = edge(1).Y)):
+                        set ShouldSkip = true
+            if(ShouldSkip = false):
+                edgeKey := "{sortedEdge(0).UUID}-{sortedEdge(1).UUID}"
+                if(set UniqueEdges[edgeKey] = edge){}
+
+        set Edges = array{}
+        for(Key->Value: UniqueEdges):
+            set Edges+= array{Value}
+
+        
+
+        #
+         # Create all pairs for MST edges
+         for(i := 0 .. RoomEntryPoints.Length - 1):
             for(j := i + 1 .. RoomEntryPoints.Length - 1):
                 if(set RoomPairs += array{(RoomEntryPoints[i], RoomEntryPoints[j])}){}
-
+                
         # Apply Kruskal's MST algorithm to connect all rooms
-        var MSTEdges: []Edge = KruskalMST(RoomEntryPoints, RoomPairs)
+        var MSTEdges: []Edge = KruskalMST(RoomEntryPoints, Edges)
+        Print("total mst edges: {MSTEdges.Length}")
+        var MSTMap: [string]logic = map{}
+        for(edge : MSTEdges):
+            MSTKey := "{edge.Point1.UUID}-{edge.Point2.UUID}"
+            if(set MSTMap[MSTKey] = true,
+            set MSTMap["{edge.Point2.UUID}-{edge.Point1.UUID}"] = true){}  # For undirected edges
+
+        for(Key->Value : UniqueEdges):
+            if (not MSTMap[Key]):  # Check if the edge is not in the MST
+                if (GetRandomFloat(0.0,1.0) < 0.125):
+                    set MSTEdges += array{CreateEdge(Value(0), Value(1))}
 
         # Connect rooms using A*
-        for(MSTEdge : MSTEdges):
-            StartRoom := FindRoomContainingPoint(MSTEdge.Point1)
+        Print("total mst edges with random: {MSTEdges.Length}")
+
+        var AIndex:int = 0
+        loop:
+            set AIndex+=1
+            if(MSTEdge:=MSTEdges[AIndex]):
+                spawn. AStarAsync(MSTEdge, AStar)
+                if(MSTEdge2 := MSTEdges[AIndex+1]):
+                    AStarAsync(MSTEdge2, AStar)
+
+            if(AIndex>= MSTEdges.Length):
+                break
+
+
+        Print("All rooms connected successfully.")
+       
+    
+    AStarAsync(MSTEdge:Edge, AStar:AStarV2)<suspends>:void=
+        StartRoom := FindRoomContainingPoint(MSTEdge.Point1)
             EndRoom := FindRoomContainingPoint(MSTEdge.Point2)
 
             PathResult := AStar.Search(
@@ -168,9 +237,6 @@ DungeonV3:= class:
                 SpawnLocation := vector3{X := I.X * 100.0, Y := I.Y * 100.0, Z := 75.0}
                 SpawnTarget(SpawnLocation, BossCube)
                 Print("Path point {index} : {I.X}, {I.Y}")
-
-        Print("All rooms connected successfully.")
-       
 
        
 
