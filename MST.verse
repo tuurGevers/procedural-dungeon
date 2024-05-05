@@ -30,9 +30,9 @@ Edge := class:
 
 SortEdgeFunction(Edge1: Edge, Edge2: Edge)<transacts>: int =
     if (Edge1.Weight < Edge2.Weight):
-        1
-    else if (Edge1.Weight  > Edge2.Weight):
         -1
+    else if (Edge1.Weight  > Edge2.Weight):
+        1
     else:
         0
 
@@ -90,29 +90,33 @@ UnionFind := class:
             
 
 
-KruskalMST(Points:[]Point, Edges:[]tuple(Point,Point))<suspends>:[]Edge=
-    var edges :[]Edge= ConverPointsToEdges(Edges)
+KruskalMST(Points: []Point, Edges: []tuple(Point, Point))<suspends>: []Edge=
+    var edges: []Edge = ConverPointsToEdges(Edges)
     set edges = edges.QuickSort(SortEdgeFunction)
     uf := UnionFind{}
     uf.Init(Points.Length)
     var UUIDPointIndex: [string]int = map{}
-    for (I->point : Points):
+    for(I->point: Points):
         if(set UUIDPointIndex[point.UUID] = I){}
 
-    var mst :[]Edge= array{}
-    TotalStartingEdges := edges.Length
-    var IDFound:int = 0
-    var SeperatePoints:int = 0
+    var mst: []Edge = array{}
+    var TotalStartingEdges: int = edges.Length
+    var SeperatePoints: int = 0
 
-    for (edge : edges):
-        if(IndexPoint1:=UUIDPointIndex[edge.Point1.UUID], IndexPoint2:=UUIDPointIndex[edge.Point2.UUID]):
-            set IDFound += 1
-            Found1 := uf.Find(IndexPoint1)
-            Found2 := uf.Find(IndexPoint2)
-            if (not  Found1= Found2):
-                set SeperatePoints +=1
-                uf.Union(IndexPoint1, IndexPoint2)
-                set mst += array{edge}
+    var Found: logic = false
+    for(edge: edges):
+        if(Found = false):
+            if(IndexPoint1 := UUIDPointIndex[edge.Point1.UUID], IndexPoint2 := UUIDPointIndex[edge.Point2.UUID]):
+                Found1 := uf.Find(IndexPoint1)
+                Found2 := uf.Find(IndexPoint2)
+                if(not Found1 = Found2):
+                    set SeperatePoints += 1
+                    uf.Union(IndexPoint1, IndexPoint2)
+                    set mst += array{edge}
 
-    Print("Total Points: {Points.Length}, Total MST Edges: , {mst.Length} complexity = V- {Points.Length-mst.Length}")
+            # Stop early if all points are connected
+            if(SeperatePoints = Points.Length - 1):
+                set Found = true
+
+    Print("Total Points: {Points.Length}, Total MST Edges: {mst.Length}")
     return mst
