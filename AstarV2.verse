@@ -90,7 +90,7 @@ AStarV2 := class:
                         set current = node
 
                 # Check goal by comparing coordinates
-                if(current.X = goal.X and current.Y = goal.Y):
+                if((current.X = goal.X and current.Y = goal.Y) or IsNonCornerTileInRoom(current, EndRoomX, EndRoomY, EndRoomWidth, EndRoomHeight) = true):
                     for(cube: SpawnedCubes):
                         cube.Dispose()
                     return (FilterPath(ReconstructPath(cameFrom, current), StartRoomX, StartRoomY, StartRoomWidth, StartRoomHeight, EndRoomX, EndRoomY, EndRoomWidth, EndRoomHeight), cameFrom)
@@ -112,8 +112,8 @@ AStarV2 := class:
                                 ):
                                     if(not openSet.Contains(neighbor) = true):
                                         # Print("Adding neighbor to open set at {neighbor.X} {neighbor.Y}, open set length: {openSet.Length}")
-                                        SpawnLocation := vector3{X := neighbor.X * 100.0, Y := neighbor.Y * 100.0, Z := 75.0}
-                                        # set SpawnedCubes += array{SpawnTarget(SpawnLocation, DebugCube)}
+                                        SpawnLocation := vector3{X := neighbor.X * 400.0, Y := neighbor.Y * 400.0, Z := 75.0}
+                                        set SpawnedCubes += array{SpawnTarget(SpawnLocation, DebugCube)}
                                         set openSet += array{neighbor}
             else:
                 Print("No path found")
@@ -176,4 +176,10 @@ AStarV2 := class:
         if(point.X >= 0 and point.X < GridWidth and point.Y >= 0 and point.Y < GridHeight):
             if(set OccupancyGrid[point.X][point.Y] = 1):  # Mark entrance value as 1
                 return true
+        return false
+
+    IsNonCornerTileInRoom(point: Point, RoomX: int, RoomY: int, RoomWidth: int, RoomHeight: int)<transacts>: logic =
+        if (point.X > RoomX and point.X < RoomX + RoomWidth - 1 and point.Y > RoomY and point.Y < RoomY + RoomHeight - 1):
+            Print("reached")
+            return true
         return false

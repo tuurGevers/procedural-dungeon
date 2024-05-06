@@ -257,6 +257,12 @@ DungeonV3:= class:
         Sleep(4.0)
         Print("All rooms connected successfully.")
         set OccupancyGrid = AStar.OccupancyGrid
+
+        for(edge: MSTEdges):
+            if(set OccupancyGrid[edge.Point1.X][edge.Point1.Y] = 1){}
+            if(set OccupancyGrid[edge.Point2.X][edge.Point2.Y] = 1){}
+
+            
         var OccupancyMap: [string]int = map{}
         for(I:OccupancyGrid):
             for(J:I):
@@ -296,26 +302,26 @@ DungeonV3:= class:
                         Sleep(0.04)
                         if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(R * 1.0))]){}
                     }
-                    # "WC" => {
-                    #     Prop := SpawnTarget(SpawnLocation, TILE_WALL_CORNER_PROP)
-                    #     Sleep(0.04)
-                    #     if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
-                    # }
-                    # "C" => {
-                    #     Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_FLOOR_PROP)
-                    #     Sleep(0.04)
-                    #     if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
-                    # }
+                    "WC" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_WALL_CORNER_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
+                    "C" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_FLOOR_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
                     # "X" => {
                     #     Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CROSSING_PROP)
                     #     Sleep(0.04)
                     #     if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
                     # }
-                    # "CC" => {
-                    #     Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CORNER_PROP)
-                    #     Sleep(0.04)
-                    #     if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
-                    # }
+                    "CC" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CORNER_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
                     # "E" => {
                     #     Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_ENTRANCE_PROP)
                     #     Sleep(0.04)
