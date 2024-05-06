@@ -18,13 +18,21 @@ DungeonMain := class(creative_device):
     @editable LinePropAsset : creative_prop_asset = DefaultCreativePropAsset
     @editable DebugLinePropAsset : creative_prop_asset = DefaultCreativePropAsset
     @editable AStarLinePropAsset : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_ROOM_FLOOR_PROP : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_ROOM_WALL_PROP : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_WALL_CORNER_PROP : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_FLOOR_PROP : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_CROSSING_PROP : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_ENTRANCE_PROP : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_CORNER_PROP: creative_prop_asset = DefaultCreativePropAsset
+
     OnBegin<override>()<suspends>:void=
         # Initialize the dungeon
         # dungeon := CreateDungeon(20, SpawnCube, CombatCube, BossCube, CorridorAsset)
         # dungeon.Generate()
        
         # Dungeon2:= CreateDungeonV2(13, 2, 4, 6, CombatCube, LinePropAsset, BossCube, DebugCube, DebugLinePropAsset, AStarLinePropAsset)
-        Dungeon3:= CreateDungeonV3(13, 2, 4, 6, CombatCube, LinePropAsset, BossCube, DebugCube, DebugLinePropAsset, AStarLinePropAsset)
+        Dungeon3:= CreateDungeonV3(10, 4, 6, 3, CombatCube, LinePropAsset, BossCube, DebugCube, DebugLinePropAsset, AStarLinePropAsset, 400.0, TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP, TILE_CORRIDOR_CORNER_PROP)
         
 
         # Optionally, print out positions and other properties for debugging

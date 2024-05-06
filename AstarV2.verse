@@ -24,12 +24,19 @@ AStarV2 := class:
     var GridHeight: int = 0
     DebugCube: creative_prop_asset
     FinalCube: creative_prop_asset
+    HeuristicWeight: float = 15.0
+    var CostMap: [string]int = map{}
+
+    PrintCostMap(): void=
+        for(key->Value: CostMap):
+            Print("Cost: {key}, Count: {Value}")
 
     # Initialize the occupancy grid
     Init(_OccupancyGrid: [][]int): void=
         set OccupancyGrid = _OccupancyGrid
         set GridWidth = OccupancyGrid.Length
         if(set GridHeight = OccupancyGrid[0].Length){}
+        set CostMap = map{}
 
     # Heuristic function using Euclidean distance
     Heuristic(node1: Point, node2: Point)<transacts>: float=
@@ -44,9 +51,23 @@ AStarV2 := class:
             newX := node.X + direction(0)
             newY := node.Y + direction(1)
             if(newX >= 0 and newX < GridWidth and newY >= 0 and newY < GridHeight):
-                if(Cost := OccupancyGrid[newX][newY]):
+                if(var Cost: float = OccupancyGrid[newX][newY] * 1.0, FlooredCost:= Floor[Cost]):
+                    # Update cost values based on grid type
+                    case (FlooredCost):
+                        2 => set Cost = 0.0  # Corridor
+                        0 => set Cost = 0.2  # Open space
+                        9 => set Cost = 0.3  # Buffer zone
+                        1 => set Cost = 0.0  # Room goal point
+                        _   => 
+
+                    CostKey := "{Cost}"
+                    if(CostMap[CostKey]):
+                        if(set CostMap[CostKey] += 1){}
+                    else:
+                        if(set CostMap[CostKey] = 1){}
+
                     NewPoint := CreatePoint(newX, newY)
-                    set neighbors += array{(NewPoint, Cost * 1.0)}
+                    set neighbors += array{(NewPoint, Cost)}
         return neighbors
 
     # The core A* search algorithm incorporating variable costs
@@ -55,12 +76,11 @@ AStarV2 := class:
         var closedSet: []Point = array{}
         var cameFrom: [string]Point = map{}
         var gScore: [string]float = map{start.UUID => 0.0}
-        var fScore: [string]float = map{start.UUID => Heuristic(start, goal)}
+        var fScore: [string]float = map{start.UUID => HeuristicWeight * Heuristic(start, goal)}
         var SpawnedCubes: []creative_prop = array{}
 
         loop:
-            Sleep(1.0 / 20.0)
-            # Print("Open set length: {openSet.Length}")
+            Sleep(1.0 / 120.0)  # Reduce sleep interval to speed up pathfinding
 
             if(openSet.Length = 0):
                 break
@@ -71,7 +91,6 @@ AStarV2 := class:
 
                 # Check goal by comparing coordinates
                 if(current.X = goal.X and current.Y = goal.Y):
-                    # Print("Path found to goal at {goal.X}, {goal.Y}")
                     for(cube: SpawnedCubes):
                         cube.Dispose()
                     return (FilterPath(ReconstructPath(cameFrom, current), StartRoomX, StartRoomY, StartRoomWidth, StartRoomHeight, EndRoomX, EndRoomY, EndRoomWidth, EndRoomHeight), cameFrom)
@@ -89,12 +108,12 @@ AStarV2 := class:
                                 if(
                                     set cameFrom[neighbor.UUID] = current
                                     set gScore[neighbor.UUID] = tentativeGScore
-                                    set fScore[neighbor.UUID] = tentativeGScore + Heuristic(neighbor, goal)
+                                    set fScore[neighbor.UUID] = tentativeGScore + HeuristicWeight * Heuristic(neighbor, goal)
                                 ):
                                     if(not openSet.Contains(neighbor) = true):
                                         # Print("Adding neighbor to open set at {neighbor.X} {neighbor.Y}, open set length: {openSet.Length}")
                                         SpawnLocation := vector3{X := neighbor.X * 100.0, Y := neighbor.Y * 100.0, Z := 75.0}
-                                        set SpawnedCubes += array{SpawnTarget(SpawnLocation, DebugCube)}
+                                        # set SpawnedCubes += array{SpawnTarget(SpawnLocation, DebugCube)}
                                         set openSet += array{neighbor}
             else:
                 Print("No path found")
@@ -111,21 +130,50 @@ AStarV2 := class:
             if(cameFrom.ContainsKey(LocalCurrent.UUID) = false):
                 break
             if(set LocalCurrent = cameFrom[LocalCurrent.UUID]):
-                set totalPath = array{LocalCurrent} + totalPath
+                if(OccupancyGrid[LocalCurrent.X][LocalCurrent.Y] = 0 ):  # Mark open space value as 0 or OccupancyGrid[LocalCurrent.X][LocalCurrent.Y] =9
+                    
+                    set totalPath = array{LocalCurrent} + totalPath
 
-        
+                else:
+                    Print("goingt hrough room")
         return totalPath
 
     FilterPath(path: []Point, StartRoomX: int, StartRoomY: int, StartRoomWidth: int, StartRoomHeight: int, EndRoomX: int, EndRoomY: int, EndRoomWidth: int, EndRoomHeight: int)<suspends>: []Point=
         var filteredPath: []Point = array{}
+        var insideRoom: logic = false
+        var entrancePointMarked: logic = false
         for(point : path):
-            if(
-                (not IsPointInRoom(point, StartRoomX, StartRoomY, StartRoomWidth, StartRoomHeight) = true) and (not IsPointInRoom(point, EndRoomX, EndRoomY, EndRoomWidth, EndRoomHeight) = true)
-            ):
+                # If point is an entrance to a room, mark it as an entrance
+                if(IsPointInRoom(point, StartRoomX, StartRoomY, StartRoomWidth, StartRoomHeight) = true or IsPointInRoom(point, EndRoomX, EndRoomY, EndRoomWidth, EndRoomHeight) = true):
+                    if( entrancePointMarked = false ):
+                        MarkPointAsEntrance(point)
+                        set entrancePointMarked = true
+                    else:
+                        set insideRoom = true
+
+                # Mark corridor points
+                if( insideRoom = false):
+                    MarkPointAsCorridor(point)
+
                 set filteredPath += array{point}
         return filteredPath
 
     IsPointInRoom(point: Point, RoomX: int, RoomY: int, RoomWidth: int, RoomHeight: int)<transacts>: logic=
         if(point.X >= RoomX and point.X < RoomX + RoomWidth and point.Y >= RoomY and point.Y < RoomY + RoomHeight):
             return true
+        return false
+
+    # Mark a point as part of the corridor in the occupancy grid
+    MarkPointAsCorridor(point: Point): logic=
+        if(point.X >= 0 and point.X < GridWidth and point.Y >= 0 and point.Y < GridHeight):
+            if(OccupancyGrid[point.X][point.Y] = 0 or OccupancyGrid[point.X][point.Y] =9):  # Mark open space value as 0
+                if(set OccupancyGrid[point.X][point.Y] = 2):  # Mark corridor value as 2
+                    return true
+        return false
+
+    # Mark a point as an entrance in the occupancy grid
+    MarkPointAsEntrance(point: Point): logic=
+        if(point.X >= 0 and point.X < GridWidth and point.Y >= 0 and point.Y < GridHeight):
+            if(set OccupancyGrid[point.X][point.Y] = 1):  # Mark entrance value as 1
+                return true
         return false
