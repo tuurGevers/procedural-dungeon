@@ -8,7 +8,7 @@ using { /Verse.org/Random }
 using { /Fortnite.com/Game }
 using { /UnrealEngine.com/Temporary/UI }
 
-# Function to create a room
+
 CreateRoomV3(
     X:int, Y:int, Width:int, Height:int, Type:string, Parent:DungeonV3,
     TILE_ROOM_FLOOR_PROP : creative_prop_asset,
@@ -31,13 +31,14 @@ TILE_WALL_CORNER_PROP : creative_prop_asset,
 TILE_CORRIDOR_FLOOR_PROP : creative_prop_asset,
 TILE_CORRIDOR_CROSSING_PROP : creative_prop_asset,
 TILE_CORRIDOR_ENTRANCE_PROP : creative_prop_asset,
-TILE_CORRIDOR_CORNER_PROP: creative_prop_asset
+TILE_CORRIDOR_CORNER_PROP: creative_prop_asset,
+TILE_CORRIDOR_TPOINT_PROP: creative_prop_asset
 
 ): DungeonV3 =
     # Implementation to create a dungeon
-    dungeon:= DungeonV3{Width:=50, Height:=50, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, 
+    dungeon:= DungeonV3{Width:=30, Height:=30, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, 
     LinePropAsset:=LinePropAsset, BossCube:=BossCube, DebugCube:=DebugCube, DebugLinePropAsset:=DebugLinePropAsset, AStarLinePropAsset:=AStarLinePropAsset, PropSize:=PropSize,
-    TILE_ROOM_FLOOR_PROP:=TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP:=TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP:=TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP:=TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP:=TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP:=TILE_CORRIDOR_ENTRANCE_PROP, TILE_CORRIDOR_CORNER_PROP:=TILE_CORRIDOR_CORNER_PROP}
+    TILE_ROOM_FLOOR_PROP:=TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP:=TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP:=TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP:=TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP:=TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP:=TILE_CORRIDOR_ENTRANCE_PROP, TILE_CORRIDOR_CORNER_PROP:=TILE_CORRIDOR_CORNER_PROP, TILE_CORRIDOR_TPOINT_PROP:=TILE_CORRIDOR_TPOINT_PROP}
     spawn. dungeon.Generate(MinRoomSize, MaxRoomSize, MinBuffer)
     return dungeon
 
@@ -69,8 +70,8 @@ RoomV3:=class:
     Parent: DungeonV3
 
     Init()<suspends>:void=
-        for(i := 0..Width):
-            for(j := 0..Height):
+        for(i := 0..Width-1):
+            for(j := 0..Height-1):
                 # Print("Spawning tile at {X*1.0+i*100.0}, {Y*1.0+j*100.0}, 50.0")
                 Spawn:= vector3{X:=(X+i)*Parent.PropSize, Y:=(Y+j)*Parent.PropSize, Z:=50.0}
                 # Spawn a floor tile at the given position
@@ -82,6 +83,9 @@ RoomV3:=class:
 
         # Implementation to initialize the room
 
+
+
+
             
 DungeonV3:= class:
     TILE_ROOM_FLOOR_PROP : creative_prop_asset
@@ -91,7 +95,7 @@ DungeonV3:= class:
     TILE_CORRIDOR_CROSSING_PROP : creative_prop_asset
     TILE_CORRIDOR_ENTRANCE_PROP : creative_prop_asset
     TILE_CORRIDOR_CORNER_PROP: creative_prop_asset
-
+    TILE_CORRIDOR_TPOINT_PROP: creative_prop_asset
     CombatCube: creative_prop_asset 
     LinePropAsset : creative_prop_asset
     BossCube : creative_prop_asset
@@ -143,7 +147,7 @@ DungeonV3:= class:
             # Limit attempts to avoid an infinite loop if there's no space
             var attempts:int = 0
             loop :
-                if(attempts > 100):
+                if(attempts > 300):
                     break
                 set attempts += 1
                 set RoomX = GetRandomInt(5, Width - RoomWidth-2)
@@ -157,7 +161,7 @@ DungeonV3:= class:
                 var NewRoom:RoomV3 = CreateRoomV3(RoomX, RoomY, RoomWidth, RoomHeight, "normal", Self, TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP)
                 if(HalfBuffer:=Floor(MinBuffer/2)):
                     MarkAreaOccupied(RoomX, RoomY, 1, 1, 0, 1)
-                    MarkAreaOccupied(RoomX, RoomY, RoomWidth, RoomHeight,HalfBuffer, 9)
+                    MarkAreaOccupied(RoomX, RoomY, RoomWidth, RoomHeight,HalfBuffer, 15)
                     MarkAreaOccupied(RoomX, RoomY, 1, 1, 0, 1)
 
                     AddRoom(NewRoom)
@@ -178,7 +182,7 @@ DungeonV3:= class:
         var RoomPairs: []tuple(Point, Point) = array{}
 
         for(room : Rooms):
-            if(EntryPoint := CreatePoint(room.X + Floor(room.Width / 2), room.Y-1 )):
+            if(EntryPoint := CreatePoint(room.X , room.Y + Floor(room.Height / 2) )):
                 SpawnTarget(vector3{X:=EntryPoint.X*PropSize, Y:=EntryPoint.Y*PropSize, Z:=85.0}, DebugCube)
                 set RoomEntryPoints += array{EntryPoint}
 
@@ -230,33 +234,52 @@ DungeonV3:= class:
             if(set MSTMap[MSTKey] = true,
             set MSTMap["{edge.Point2.UUID}-{edge.Point1.UUID}"] = true){}  # For undirected edges
 
-        for(Key->Value : UniqueEdges):
-            if (not MSTMap[Key]):  # Check if the edge is not in the MST
-                if (GetRandomFloat(0.0,1.0) < 0.125):
-                    set MSTEdges += array{CreateEdge(Value(0), Value(1))}
+        # for(Key->Value : UniqueEdges):
+        #     if (not MSTMap[Key]):  # Check if the edge is not in the MST
+        #         if (GetRandomFloat(0.0,1.0) < 0.125):
+        #             set MSTEdges += array{CreateEdge(Value(0), Value(1))}
 
         # Connect rooms using A*
         Print("total mst edges with random: {MSTEdges.Length}")
 
-        var AIndex:int = 0
+        # var AIndex:int = 0
+        
+
+        # loop:
+        #     if(MSTEdge:=MSTEdges[AIndex]):
+        #         spawn. AStarAsync(MSTEdge, AStar)
+        #     if(MSTEdge:=MSTEdges[AIndex+1]):
+        #         spawn. AStarAsync(MSTEdge, AStar)
+        #     if(MSTEdge:=MSTEdges[AIndex+2]):
+        #         AStarAsync(MSTEdge, AStar)
+                
+        #     set AIndex+=3
+
+        #     if(AIndex>= MSTEdges.Length):
+        #         break
+
+        # Sleep(4.0)
+        # Print("All rooms connected successfully.")
+        # set OccupancyGrid = AStar.OccupancyGrid
+        #astar
+        AStar2 := AStarV2{OccupancyGrid:= OccupancyGrid, DebugCube:= DebugCube, FinalCube:=BossCube}
+        AStar2.Init(OccupancyGrid)
+
+        var AIndex2:int = 0
         
 
         loop:
-            if(MSTEdge:=MSTEdges[AIndex]):
-                spawn. AStarAsync(MSTEdge, AStar)
-            if(MSTEdge:=MSTEdges[AIndex+1]):
-                spawn. AStarAsync(MSTEdge, AStar)
-            if(MSTEdge:=MSTEdges[AIndex+2]):
-                AStarAsync(MSTEdge, AStar)
+            if(MSTEdge:=MSTEdges[AIndex2]):
+                AStarAsync(MSTEdge, AStar2, ?Final:=true)
                 
-            set AIndex+=3
+            set AIndex2+=1
 
-            if(AIndex>= MSTEdges.Length):
+            if(AIndex2>= MSTEdges.Length):
                 break
 
-        Sleep(4.0)
-        Print("All rooms connected successfully.")
-        set OccupancyGrid = AStar.OccupancyGrid
+       
+        set OccupancyGrid = AStar2.OccupancyGrid
+        # MergeParallelCorridors()
 
         for(edge: MSTEdges):
             if(set OccupancyGrid[edge.Point1.X][edge.Point1.Y] = 1){}
@@ -277,6 +300,16 @@ DungeonV3:= class:
         #tilemapping
         tileMap := TileMap{ParentDungeon := Self}
         FinalTiles := tileMap.GenerateTileMapping(OccupancyGrid)
+
+        for(I:FinalTiles):
+            var PrintRow : string = ""
+            for(J:I):
+                if(J(0).Length = 1):
+                    set PrintRow+= "{J(0)} "
+                else:
+                    set PrintRow+= "{J(0)}"
+            Print("{PrintRow}")
+
         Print("\n\n")
         var TypeMap : [string]int = map{}
        
@@ -312,13 +345,19 @@ DungeonV3:= class:
                         Sleep(0.04)
                         if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
                     }
-                    # "X" => {
-                    #     Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CROSSING_PROP)
-                    #     Sleep(0.04)
-                    #     if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
-                    # }
+                    "X" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CROSSING_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
                     "CC" => {
                         Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CORNER_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
+                    "CT" => {
+                        Print("TPoint")
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_TPOINT_PROP)
                         Sleep(0.04)
                         if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
                     }
@@ -332,39 +371,19 @@ DungeonV3:= class:
         
                 
        
+    IsCorridor(x: int, y: int)<transacts>: logic =
+        if(OccupancyGrid[x][y] = 2):
+            return true
+        return false
+
     
-    AStarAsync(MSTEdge:Edge, AStar:AStarV2)<suspends>:void=
+        
+    AStarAsync(MSTEdge: Edge, AStar: AStarV2, ?Final: logic = false)<suspends>: void =
         StartRoom := FindRoomContainingPoint(MSTEdge.Point1)
         EndRoom := FindRoomContainingPoint(MSTEdge.Point2)
 
-        var SelectedStartPoint:Point = MSTEdge.Point1
-        var SelectedEndPoint:Point = MSTEdge.Point2
-        #choose correct point in room based on xy relations x
-        if (EndRoom.Y > StartRoom.Y):
-            set SelectedStartPoint.Y = StartRoom.Y + StartRoom.Height
-            if(set SelectedStartPoint.X = StartRoom.X + Floor(StartRoom.Width / 2)){}
-
-            set SelectedEndPoint.Y = EndRoom.Y-1
-            if(set SelectedEndPoint.X = EndRoom.X + Floor(EndRoom.Width / 2)){}
-        else if (EndRoom.Y < StartRoom.Y):
-            set SelectedStartPoint.Y = StartRoom.Y
-            if(set SelectedStartPoint.X = StartRoom.X + Floor(StartRoom.Width / 2)){}
-
-            set SelectedEndPoint.Y = EndRoom.Y + EndRoom.Height+1
-            if(set SelectedEndPoint.X = EndRoom.X + Floor(EndRoom.Width / 2)){}
-        else if(EndRoom.X > StartRoom.X):
-            set SelectedStartPoint.X = StartRoom.X + StartRoom.Width
-            if(set SelectedStartPoint.Y = StartRoom.Y + Floor(StartRoom.Height / 2)){}
-
-            set SelectedEndPoint.X = EndRoom.X-1
-            if(set SelectedEndPoint.Y = EndRoom.Y + Floor(EndRoom.Height / 2)){}
-        else if (EndRoom.X < StartRoom.X):
-            set SelectedStartPoint.X = StartRoom.X
-            if(set SelectedStartPoint.Y = StartRoom.Y + Floor(StartRoom.Height / 2)){}
-
-            set SelectedEndPoint.X = EndRoom.X + EndRoom.Width+1
-            if(set SelectedEndPoint.Y = EndRoom.Y + Floor(EndRoom.Height / 2)){}
-            
+        var SelectedStartPoint: Point = MSTEdge.Point1
+        var SelectedEndPoint: Point = MSTEdge.Point2
 
         PathResult := AStar.Search(
             SelectedStartPoint, SelectedEndPoint,
@@ -372,19 +391,22 @@ DungeonV3:= class:
             EndRoom.X, EndRoom.Y, EndRoom.Width, EndRoom.Height
         )
 
-        for(index->I: PathResult(0)):
-            SpawnLocation := vector3{X := I.X * PropSize, Y := I.Y * PropSize, Z := 75.0}
-            SpawnTarget(SpawnLocation, BossCube)
+        if(Final = true):
+            for(index->I: PathResult(0)):
+                SpawnLocation := vector3{X := I.X * PropSize, Y := I.Y * PropSize, Z := 75.0}
+                SpawnTarget(SpawnLocation, BossCube)
 
        
-
-
     
     #
     FindRoomContainingPoint(point: Point): RoomV3=
         for(room : Rooms):
+            Print("Room {room.UUID} {room.X} {room.Y} {room.Width} {room.Height} point {point.X} {point.Y}")
             if(point.X >= room.X and point.X < room.X + room.Width and point.Y >= room.Y and point.Y < room.Y + room.Height):
+                Print("Found room {room.UUID} {room.X} {room.Y}")
                 return room
+
+        Print("Room not found for point {point.X} {point.Y}")
         return RoomV3{ X:=-1, Y:=-1, Width:=0, Height:=0, Type:="nil", Parent:=Self, UUID:="",TILE_ROOM_FLOOR_PROP:=TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP:=TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP:=TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP:=TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP:=TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP:=TILE_CORRIDOR_ENTRANCE_PROP }  # Return an empty room if not found        
 
     # Any additional functions needed for triangulation, MST, etc.
@@ -410,7 +432,6 @@ DungeonV3:= class:
         for (x := StartX .. EndX - 1):
             for (y := StartY .. EndY - 1):
                 if (not OccupancyGrid[x][y] = 0):
-                    Print("Area is not free at {x}, {y}")
                     return false  # The area is not free
         return true  # The area is free
 
@@ -422,11 +443,14 @@ DungeonV3:= class:
         for (x := Max(0, X - HalfBuffer) .. Min(X + _Width + HalfBuffer, Width) - 1):
             for (y := Max(0, Y - HalfBuffer) .. Min(Y + _Height + HalfBuffer, Height) - 1):
                 if (set OccupancyGrid[x][y] = 9) {}
+                # SpawnTarget(vector3{X := x * PropSize, Y := y * PropSize, Z := 450.0}, DebugCube)
     
         # Mark the inner room area with the specified `Value`
         for (x := X .. X + _Width - 1):
             for (y := Y .. Y + _Height - 1):
                 if (set OccupancyGrid[x][y] = Value) {}
+                # SpawnTarget(vector3{X := x * PropSize, Y := y * PropSize, Z := 400.0}, CombatCube)
+
     
         # Mark corners specifically with `900`
         if (_Width > 1 and _Height > 1):
@@ -442,13 +466,3 @@ DungeonV3:= class:
             # Top-right corner
             if (X + _Width + 1 < Width and Y + _Height + 1 < Height , set OccupancyGrid[X + _Width ][Y + _Height ] = 90000000):
                 SpawnTarget(vector3{X := (X + _Width ) * PropSize, Y := (Y + _Height ) * PropSize, Z := 400.0}, CombatCube)
-    
-               
-        
-            
-    # Find Room by UUID
-    FindRoomByUUID(UUID: string): RoomV3=
-        for(room : Rooms):
-            if(room.UUID = UUID):
-                return room
-        return RoomV3{ X:=-1, Y:=-1, Width:=0, Height:=0, Type:="nil", Parent:=Self, UUID:="",TILE_ROOM_FLOOR_PROP:=TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP:=TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP:=TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP:=TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP:=TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP:=TILE_CORRIDOR_ENTRANCE_PROP}  # Return an empty room if not found
