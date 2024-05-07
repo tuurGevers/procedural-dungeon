@@ -22,6 +22,8 @@ TileMap := class:
         if (x >= 0 and x < GridWidth and y >= 0 and y < GridHeight):
             if (set tilemap[x][y] = tileType):
                 if (set tilemap_rotations[x][y] = rotation) {}
+        else:
+            Print("Tile out of bounds: X {x} Y {y}")
 
     GetWallRotation(x: int, y: int): int =
         var north: string = TILE_EMPTY
@@ -168,9 +170,7 @@ TileMap := class:
 
     AlignCorridorsToWallsAndCorners()<transacts>: void =
         for (x := 0 .. GridWidth - 1):
-            for (y := 0 .. GridHeight - 1):
-                if(not tilemap[x][y] = TILE_ROOM_WALL and not tilemap[x][y] = TILE_WALL_CORNER and not tilemap[x][y] = TILE_ROOM_FLOOR): 
-                    
+            for (y := 0 .. GridHeight - 1):                    
                     if (tilemap[x][y] = TILE_CORRIDOR_FLOOR and GetCorridorPrimaryConnection(x, y) = true):
                         var primaryRotation: int = GetCorridorRotation(x, y, true)
                         if (set tilemap_rotations[x][y] = primaryRotation) {}
@@ -202,19 +202,17 @@ TileMap := class:
         # Mark Room Floors and Walls
         for (room: ParentDungeon.Rooms):
             # Mark Room Floors
-            Print("Room: X {room.X} Y {room.Y} Width {room.Width} Height {room.Height} ")
-            for (x := room.X-1 .. room.X + room.Width - 1):
-                for (y := room.Y-1 .. room.Y + room.Height - 1):
-                        SetTile(x, y, TILE_ROOM_FLOOR, 0)
+            for (i := 0 .. room.Width - 1):
+                for (j := 0 .. room.Height - 1):
+                    SetTile(room.X + i, room.Y + j, TILE_ROOM_FLOOR, 0)
 
             # Mark Room Walls
-            for (x := room.X - 1 .. room.X + room.Width-1):
-                
-                SetTile(x, room.Y - 1, TILE_ROOM_WALL, GetWallRotation(x, room.Y - 1))
-                SetTile(x, room.Y + room.Height, TILE_ROOM_WALL, GetWallRotation(x, room.Y + room.Height))
-            for (y := room.Y - 1 .. room.Y + room.Height-1):
-                SetTile(room.X - 1, y, TILE_ROOM_WALL, GetWallRotation(room.X - 1, y))
-                SetTile(room.X + room.Width, y, TILE_ROOM_WALL, GetWallRotation(room.X + room.Width, y))
+            for (i := -1 .. room.Width):
+                SetTile(room.X + i, room.Y - 1, TILE_ROOM_WALL, 0)
+                SetTile(room.X + i, room.Y + room.Height, TILE_ROOM_WALL, 0)
+            for (j := -1 .. room.Height):
+                SetTile(room.X - 1, room.Y + j, TILE_ROOM_WALL, 0)
+                SetTile(room.X + room.Width, room.Y + j, TILE_ROOM_WALL, 0)
 
             # Mark Wall Corners
             SetTile(room.X - 1, room.Y - 1, TILE_WALL_CORNER, GetCornerRotation(room.X - 1, room.Y - 1))
@@ -222,25 +220,13 @@ TileMap := class:
             SetTile(room.X + room.Width, room.Y - 1, TILE_WALL_CORNER, GetCornerRotation(room.X + room.Width, room.Y - 1))
             SetTile(room.X + room.Width, room.Y + room.Height, TILE_WALL_CORNER, GetCornerRotation(room.X + room.Width, room.Y + room.Height))
 
-            for (x := room.X-1 .. room.X + room.Width - 1):
-                for (y := room.Y-1 .. room.Y + room.Height - 1):
-                        SetTile(x, y, TILE_ROOM_FLOOR, 0)
-
-        # Mark Corridor Floors
-        for (x := 0 .. GridWidth - 1):
-            for (y := 0 .. GridHeight - 1):
-                if (OccupancyGrid[x][y] = 2):
-                    SetTile(x, y, TILE_CORRIDOR_FLOOR, GetCorridorRotation(x, y, true))
         # Mark Corridor Floors
         for (x := 0 .. GridWidth - 1):
             for (y := 0 .. GridHeight - 1):
                 if (OccupancyGrid[x][y] = 2):
                     SetTile(x, y, TILE_CORRIDOR_FLOOR, GetCorridorRotation(x, y, true))
 
-        #Align Corridors To Walls
-        
         AlignCorridorsToWallsAndCorners()
-        
 
         # Return the final tilemap
         var result: [][]tuple(string, int) = array{}
@@ -251,13 +237,7 @@ TileMap := class:
             set result += array{row}
         return result
 
-    AlignCorridorsToWalls()<transacts>: void =
-        for (x := 0 .. GridWidth - 1):
-            for (y := 0 .. GridHeight - 1):
-                if (tilemap[x][y] = TILE_CORRIDOR_FLOOR and GetCorridorPrimaryConnection(x, y) = true):
-                    # Find the direction of the corridor rotation
-                    var primaryRotation: int = GetCorridorRotation(x, y, true)
-                    if (set tilemap_rotations[x][y] = primaryRotation) {}
+    
 
     GetCorridorPrimaryConnection(x: int, y: int)<transacts>: logic =
         var north: string = TILE_EMPTY
