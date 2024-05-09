@@ -173,7 +173,7 @@ ManhattenDistance(V1:vector3, V2:vector3)<transacts>:float=
     return Abs(V1.X-V2.X) + Abs(V1.Y - V2.Y) +  Abs(V1.Z - V2.Z)
 
 # Spawns a target prop at a given position with optional scale and rotation
-SpawnTarget(Position:vector3, Prop: creative_prop_asset, ?Scale:vector3 = vector3{X:=1.0,Y:=1.0,Z:=1.0}, ?Rotation:rotation=IdentityRotation() ):creative_prop=
+SpawnTarget(Position:vector3, Prop: creative_prop_asset, ?Scale:vector3 = vector3{X:=1.0,Y:=1.0,Z:=1.0}, ?Rotation:rotation=IdentityRotation() )<transacts>:creative_prop=
     var LocalProp:creative_prop = creative_prop{}
     if (SpawnedProp := SpawnProp(Prop, transform{Translation:=Position, Rotation:= Rotation, Scale:=Scale})(0)?):
         set LocalProp =SpawnedProp

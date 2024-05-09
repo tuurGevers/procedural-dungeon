@@ -130,7 +130,7 @@ DungeonV3:= class:
     Generate( MinRoomSize:int, MaxRoomSize:int, MinBuffer:int)<suspends>: void =
         InitOccupancyGrid()
         var RoomsCreated:int = 0
-
+        var Fails:int = 0
         loop:
             Print("Creating room {RoomsCreated+1}")
             if(RoomsCreated >=PreferedRooms):
@@ -147,11 +147,11 @@ DungeonV3:= class:
             # Limit attempts to avoid an infinite loop if there's no space
             var attempts:int = 0
             loop :
-                if(attempts > 300):
+                if(attempts > 400):
                     break
                 set attempts += 1
-                set RoomX = GetRandomInt(5, Width - RoomWidth-2)
-                set RoomY = GetRandomInt(5, Height - RoomHeight-2)
+                set RoomX = GetRandomInt(2, Width - RoomWidth-2)
+                set RoomY = GetRandomInt(2, Height - RoomHeight-2)
 
                 if(IsAreaFree(RoomX, RoomY, RoomWidth, RoomHeight, MinBuffer) = true):
                     set FoundSpot = true
@@ -160,15 +160,15 @@ DungeonV3:= class:
             if(FoundSpot= true):
                 var NewRoom:RoomV3 = CreateRoomV3(RoomX, RoomY, RoomWidth, RoomHeight, "normal", Self, TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP)
                 if(HalfBuffer:=Floor(MinBuffer/2)):
-                    MarkAreaOccupied(RoomX, RoomY, 1, 1, 0, 1)
                     MarkAreaOccupied(RoomX, RoomY, RoomWidth, RoomHeight,HalfBuffer, 15)
-                    MarkAreaOccupied(RoomX, RoomY, 1, 1, 0, 1)
 
                     AddRoom(NewRoom)
                     set RoomsCreated += 1
             else:
                 Print("No more space available for new rooms.")
-                break
+                set Fails+=1
+                if(Fails>10):
+                    break
 
         Print("Dungeon generation complete. Created {RoomsCreated} rooms. Starting triangulation.")
         
@@ -234,10 +234,6 @@ DungeonV3:= class:
             if(set MSTMap[MSTKey] = true,
             set MSTMap["{edge.Point2.UUID}-{edge.Point1.UUID}"] = true){}  # For undirected edges
 
-        # for(Key->Value : UniqueEdges):
-        #     if (not MSTMap[Key]):  # Check if the edge is not in the MST
-        #         if (GetRandomFloat(0.0,1.0) < 0.125):
-        #             set MSTEdges += array{CreateEdge(Value(0), Value(1))}
 
         # Connect rooms using A*
         Print("total mst edges with random: {MSTEdges.Length}")
@@ -298,7 +294,7 @@ DungeonV3:= class:
             Print("OccupancyMap {K} : {V}")
 
         #tilemapping
-        tileMap := TileMap{ParentDungeon := Self}
+        tileMap := TileMap{ParentDungeon := Self, NorthProp:=CombatCube, EastProp:=BossCube, WestProp:=DebugCube}
         FinalTiles := tileMap.GenerateTileMapping(OccupancyGrid)
 
         for(I:FinalTiles):
@@ -359,6 +355,18 @@ DungeonV3:= class:
                         Print("TPoint")
                         Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_TPOINT_PROP)
                         Sleep(0.04)
+                        case(rot):
+                            0 => {
+                                SpawnTarget(vector3{X:=SpawnLocation.X, Y:=SpawnLocation.Y, Z:=400.0}, BossCube)
+                            }
+                            90 => {
+                                SpawnTarget(vector3{X:=SpawnLocation.X, Y:=SpawnLocation.Y, Z:=400.0}, CombatCube)
+                            }
+                            180 => {
+                                SpawnTarget(vector3{X:=SpawnLocation.X, Y:=SpawnLocation.Y, Z:=400.0}, DebugCube)
+                            }
+                            _ => {
+                            }
                         if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
                     }
                     # "E" => {
@@ -440,14 +448,14 @@ DungeonV3:= class:
      # Marks the specified area as occupied
     MarkAreaOccupied(X: int, Y: int, _Width: int, _Height: int, HalfBuffer: int, Value: int): void=
         # Mark the buffer zone around the room with `9`
-        for (x := Max(0, X - HalfBuffer) .. Min(X + _Width + HalfBuffer, Width) - 1):
-            for (y := Max(0, Y - HalfBuffer) .. Min(Y + _Height + HalfBuffer, Height) - 1):
-                if (set OccupancyGrid[x][y] = 9) {}
-                # SpawnTarget(vector3{X := x * PropSize, Y := y * PropSize, Z := 450.0}, DebugCube)
+        # for (x := Max(0, X - HalfBuffer) .. Min(X + _Width + HalfBuffer, Width) - 1):
+        #     for (y := Max(0, Y - HalfBuffer) .. Min(Y + _Height + HalfBuffer, Height) - 1):
+        #         if (set OccupancyGrid[x][y] = 9) {}
+        #         # SpawnTarget(vector3{X := x * PropSize, Y := y * PropSize, Z := 450.0}, DebugCube)
     
         # Mark the inner room area with the specified `Value`
-        for (x := X .. X + _Width - 1):
-            for (y := Y .. Y + _Height - 1):
+        for (x := X-1 .. X + _Width ):
+            for (y := Y -1.. Y + _Height ):
                 if (set OccupancyGrid[x][y] = Value) {}
                 # SpawnTarget(vector3{X := x * PropSize, Y := y * PropSize, Z := 400.0}, CombatCube)
 

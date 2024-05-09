@@ -1,4 +1,5 @@
 using { /Fortnite.com/Devices }
+using { /UnrealEngine.com/Temporary/SpatialMath }
 
 TileMap := class:
     TILE_EMPTY: string = "O"
@@ -11,6 +12,10 @@ TileMap := class:
     TILE_CORRIDOR_TPOINT: string = "CT"
     TILE_CORRIDOR_CROSSING: string = "X"
 
+    NorthProp:creative_prop_asset
+    EastProp:creative_prop_asset
+    WestProp:creative_prop_asset
+
     ParentDungeon: DungeonV3
     var GridWidth: int = 0
     var GridHeight: int = 0
@@ -18,10 +23,10 @@ TileMap := class:
     var tilemap: [][]string = array{}
     var tilemap_rotations: [][]int = array{}
 
-    SetTile(x: int, y: int, tileType: string, rotation: int)<transacts>: void =
+    SetTile(x: int, y: int, tileType: string, Rotation: int)<transacts>: void =
         if (x >= 0 and x < GridWidth and y >= 0 and y < GridHeight):
             if (set tilemap[x][y] = tileType):
-                if (set tilemap_rotations[x][y] = rotation) {}
+                if (set tilemap_rotations[x][y] = Rotation) {}
         else:
             Print("Tile out of bounds: X {x} Y {y}")
 
@@ -84,31 +89,37 @@ TileMap := class:
         var west: string = TILE_EMPTY
 
         if (y + 1 < GridHeight):
-            if (set north = tilemap[x][y + 1]) {}
+            if (set north = tilemap[x][y + 1]) :
+                # SpawnTarget(vector3{X:=x*500.0, Y:=(y+1)*500.0, Z:=400.0}, NorthProp)
+
         if (y - 1 >= 0):
             if (set south = tilemap[x][y - 1]) {}
         if (x + 1 < GridWidth):
-            if (set east = tilemap[x + 1][y]) {}
+            if (set east = tilemap[x + 1][y]):
+                # SpawnTarget(vector3{X:=(x+1)*500.0, Y:=(y)*500.0, Z:=400.0}, EastProp)
+
         if (x - 1 >= 0):
-            if (set west = tilemap[x - 1][y]) {}
+            if (set west = tilemap[x - 1][y]) :
+                # SpawnTarget(vector3{X:=(x-1)*500.0, Y:=(y)*500.0, Z:=400.0}, WestProp)
+
 
         # Determine T-junction rotation
         if ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
             (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER) and
             (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER)):
-                return 180  # T-junction pointing south
+                return 270  # T-junction pointing south
         if ((south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
             (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER) and
             (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER)):
-                return 0  # T-junction pointing north
+                return 90  # T-junction pointing north
         if ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
             (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
             (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER)):
-                return 90  # T-junction pointing west
+                return 180  # T-junction pointing west
         if ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
             (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
             (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER)):
-                return -90  # T-junction pointing east
+                return 0    # T-junction pointing east
 
         return 0  # Default orientation
 
@@ -128,7 +139,7 @@ TileMap := class:
         if (x - 1 >= 0):
             if (set west = tilemap[x - 1][y]) {}
 
-        if ((west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL) and (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL)):
+        if ((west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_WALL_CORNER) and (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_WALL_CORNER)  ):
             return 90  # Corridor running horizontally
 
         if ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL) and (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL)):
@@ -220,6 +231,11 @@ TileMap := class:
             SetTile(room.X + room.Width, room.Y - 1, TILE_WALL_CORNER, GetCornerRotation(room.X + room.Width, room.Y - 1))
             SetTile(room.X + room.Width, room.Y + room.Height, TILE_WALL_CORNER, GetCornerRotation(room.X + room.Width, room.Y + room.Height))
 
+        # Mark Corridor Floors
+        for (x := 0 .. GridWidth - 1):
+            for (y := 0 .. GridHeight - 1):
+                if (OccupancyGrid[x][y] = 2):
+                    SetTile(x, y, TILE_CORRIDOR_FLOOR, GetCorridorRotation(x, y, true))
         # Mark Corridor Floors
         for (x := 0 .. GridWidth - 1):
             for (y := 0 .. GridHeight - 1):
