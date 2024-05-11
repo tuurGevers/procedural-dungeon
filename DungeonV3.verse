@@ -355,18 +355,6 @@ DungeonV3:= class:
                         Print("TPoint")
                         Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_TPOINT_PROP)
                         Sleep(0.04)
-                        case(rot):
-                            0 => {
-                                SpawnTarget(vector3{X:=SpawnLocation.X, Y:=SpawnLocation.Y, Z:=400.0}, BossCube)
-                            }
-                            90 => {
-                                SpawnTarget(vector3{X:=SpawnLocation.X, Y:=SpawnLocation.Y, Z:=400.0}, CombatCube)
-                            }
-                            180 => {
-                                SpawnTarget(vector3{X:=SpawnLocation.X, Y:=SpawnLocation.Y, Z:=400.0}, DebugCube)
-                            }
-                            _ => {
-                            }
                         if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
                     }
                     # "E" => {

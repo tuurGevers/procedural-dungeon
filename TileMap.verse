@@ -22,7 +22,46 @@ TileMap := class:
 
     var tilemap: [][]string = array{}
     var tilemap_rotations: [][]int = array{}
+    
+    DetectProblematicConnections()<transacts>: [][]int =
+        var problematicConnections: [][]int = array{}
+        var roomConnections: [string]tuple(int, int) = map{}  # Dictionary to track first corridor connection for each room
+        
+        for (x := 0 .. GridWidth - 1):
+            for (y := 0 .. GridHeight - 1):
+                if (array{TILE_CORRIDOR_FLOOR, TILE_CORRIDOR_ENTRY, TILE_CORRIDOR_CORNER, TILE_CORRIDOR_TPOINT, TILE_CORRIDOR_CROSSING}.Find[tilemap[x][y]]):
+                    var isProblematic: logic = false
+                    var roomKey: string = ""
+                    # Check each direction for room walls and identify the room by constructing a unique key (e.g., x-y coordinates of the room wall)
+                    if (y + 1 < GridHeight and tilemap[x][y + 1] = TILE_ROOM_WALL):
+                        set roomKey = "x{x}y{y+1}"
+                    else if (y - 1 >= 0 and tilemap[x][y - 1] = TILE_ROOM_WALL):
+                        set roomKey = "x{x}y{y-1}"
+                    else if (x + 1 < GridWidth and tilemap[x + 1][y] = TILE_ROOM_WALL):
+                        set roomKey = "x{x+1}y{y}"
+                    else if (x - 1 >= 0 and tilemap[x - 1][y] = TILE_ROOM_WALL):
+                        set roomKey = "x{x-1}y{y}"
+                    
+                    if (not roomKey = ""):
+                        # Check if this is the first connection recorded for the room
+                        if (Conn:=roomConnections[roomKey]):
+                            Print("Room {roomKey} already has a connection at x {Conn(0)} y {Conn(1)}")
+                            set isProblematic = true  # Not the first connection, hence problematic
+                        else:
+                            # Record this tile as the first connection to the room
+                            if(set roomConnections[roomKey] = (x, y)):
+                                Print("First connection for room {roomKey} at x {x} y {y}")
+                    
+                    if (isProblematic = true):
+                        SpawnTarget(vector3{X:=x*500.0, Y:=y*500.0, Z:=400.0}, WestProp)
+                        set problematicConnections += array{array{x, y}}
+    
+        return problematicConnections
+    
+    
+        
 
+    
     SetTile(x: int, y: int, tileType: string, Rotation: int)<transacts>: void =
         if (x >= 0 and x < GridWidth and y >= 0 and y < GridHeight):
             if (set tilemap[x][y] = tileType):
@@ -71,13 +110,13 @@ TileMap := class:
         if (x - 1 >= 0):
             if (set west = tilemap[x - 1][y]) {}
 
-        if ((south = TILE_ROOM_WALL or south = TILE_CORRIDOR_ENTRY) and (east = TILE_ROOM_WALL or east = TILE_CORRIDOR_ENTRY)):
+        if ((not south = TILE_EMPTY) and (not east = TILE_EMPTY)):
             return 90  # Corner pointing north-west
-        if ((north = TILE_ROOM_WALL or north = TILE_CORRIDOR_ENTRY) and (east = TILE_ROOM_WALL or east = TILE_CORRIDOR_ENTRY)):
+        if ((not north = TILE_EMPTY) and (not east = TILE_EMPTY)):
             return 180  # Corner pointing south-west
-        if ((west = TILE_ROOM_WALL or west = TILE_CORRIDOR_ENTRY) and (south = TILE_ROOM_WALL or south = TILE_CORRIDOR_ENTRY)):
+        if ((not west = TILE_EMPTY) and (not south = TILE_EMPTY)):
             return 0  # Corner pointing north-east
-        if ((north = TILE_ROOM_WALL or north = TILE_CORRIDOR_ENTRY) and (west = TILE_ROOM_WALL or west = TILE_CORRIDOR_ENTRY)):
+        if ((not north = TILE_EMPTY) and (not west = TILE_EMPTY)):
             return 270  # Corner pointing south-east
 
         return 0  # Default orientation
@@ -104,21 +143,21 @@ TileMap := class:
 
 
         # Determine T-junction rotation
-        if ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
-            (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER) and
-            (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER)):
+        if ((not north = TILE_EMPTY) and
+            (not east = TILE_EMPTY) and
+            (not west = TILE_EMPTY)):
                 return 270  # T-junction pointing south
-        if ((south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
-            (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER) and
-            (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER)):
+        if ((not south = TILE_EMPTY) and
+            (not east = TILE_EMPTY) and
+            (not west = TILE_EMPTY)):
                 return 90  # T-junction pointing north
-        if ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
-            (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
-            (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER)):
+        if ((not north = TILE_EMPTY) and
+            (not south = TILE_EMPTY) and
+            (not east = TILE_EMPTY)):
                 return 180  # T-junction pointing west
-        if ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
-            (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
-            (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER)):
+        if ((not north = TILE_EMPTY) and
+            (not south = TILE_EMPTY) and
+            (not west = TILE_EMPTY)):
                 return 0    # T-junction pointing east
 
         return 0  # Default orientation
@@ -251,6 +290,9 @@ TileMap := class:
             for (y := 0 .. GridHeight - 1):
                 if (set row += array{(tilemap[x][y], tilemap_rotations[x][y])}) {}
             set result += array{row}
+
+        Problems:= DetectProblematicConnections()
+        
         return result
 
     
@@ -284,7 +326,7 @@ TileMap := class:
         var south: string = TILE_EMPTY
         var east: string = TILE_EMPTY
         var west: string = TILE_EMPTY
-
+    
         if (y + 1 < GridHeight):
             if (set north = tilemap[x][y + 1]) {}
         if (y - 1 >= 0):
@@ -293,18 +335,16 @@ TileMap := class:
             if (set east = tilemap[x + 1][y]) {}
         if (x - 1 >= 0):
             if (set west = tilemap[x - 1][y]) {}
-
-        if (((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
-         (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER)) or
-        ((south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
-         (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER)) or
-        ((south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER) and
-         (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER)) or
-        ((north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER) and
-         (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER))):
-            return true
+    
+        # Check if the adjacent tiles are not empty and form a corner pattern
+        if ((not north = TILE_EMPTY and not east = TILE_EMPTY) or
+            (not south = TILE_EMPTY and not east = TILE_EMPTY) or
+            (not south = TILE_EMPTY and  not west = TILE_EMPTY) or
+            (not north = TILE_EMPTY and not west = TILE_EMPTY)):
+                return true
         else:
-            return false
+                return false
+                
 
     IsTPoint(x: int, y: int)<transacts>: logic =
         var north: string = TILE_EMPTY
@@ -323,13 +363,13 @@ TileMap := class:
 
         var connectedDirections: int = 0
 
-        if (north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER):
+        if (not north = TILE_EMPTY):
             set connectedDirections += 1
-        if (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER):
+        if (not south = TILE_EMPTY):
             set connectedDirections += 1
-        if (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER):
+        if (not east = TILE_EMPTY):
             set connectedDirections += 1
-        if (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER):
+        if (not west = TILE_EMPTY):
             set connectedDirections += 1
 
         if (connectedDirections = 3):
