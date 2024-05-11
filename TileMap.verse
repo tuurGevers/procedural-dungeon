@@ -192,6 +192,27 @@ TileMap := class:
 
         return 0  # Default orientation
 
+    GetEntranceRotation(x: int, y: int)<transacts>: int =
+        var north: string = TILE_EMPTY
+        var south: string = TILE_EMPTY
+        var east: string = TILE_EMPTY
+        var west: string = TILE_EMPTY
+
+        if (y + 1 < GridHeight):
+            if (set north = tilemap[x][y + 1]) {}
+        if (y - 1 >= 0):
+            if (set south = tilemap[x][y - 1]) {}
+        if (x + 1 < GridWidth):
+            if (set east = tilemap[x + 1][y]) {}
+        if (x - 1 >= 0):
+            if (set west = tilemap[x - 1][y]) {}
+
+        if ((west = TILE_CORRIDOR_FLOOR or west = TILE_CORRIDOR_CORNER or west = TILE_CORRIDOR_CROSSING or west =TILE_CORRIDOR_TPOINT) or (east = TILE_CORRIDOR_FLOOR or east = TILE_CORRIDOR_CORNER or east = TILE_CORRIDOR_CROSSING or east =TILE_CORRIDOR_TPOINT) ):
+            return 90  # Corridor running horizontally
+
+
+        return 0  # Default orientation
+
     GetCorridorCornerRotation(x: int, y: int)<transacts>: int =
         var north: string = TILE_EMPTY
         var south: string = TILE_EMPTY
@@ -282,7 +303,12 @@ TileMap := class:
                     SetTile(x, y, TILE_CORRIDOR_FLOOR, GetCorridorRotation(x, y, true))
 
         AlignCorridorsToWallsAndCorners()
-
+        normalEntrances := IdentifyNormalEntrances()
+    
+        # Optionally log detected entrances or take additional actions
+        for (entrance : normalEntrances):
+            SetTile(entrance(0), entrance(1), TILE_CORRIDOR_ENTRY, GetEntranceRotation(entrance(0), entrance(1)))
+            Print("Normal Entrance at X:{entrance(0)}, Y:{entrance(1)}")
         # Return the final tilemap
         var result: [][]tuple(string, int) = array{}
         for (x := 0 .. GridWidth - 1):
@@ -291,7 +317,6 @@ TileMap := class:
                 if (set row += array{(tilemap[x][y], tilemap_rotations[x][y])}) {}
             set result += array{row}
 
-        Problems:= DetectProblematicConnections()
         
         return result
 
@@ -377,34 +402,85 @@ TileMap := class:
         else:
             return false
 
+    IsEntrance(x: int, y: int)<transacts>: logic =
+        if(tilemap[x][y] = TILE_ROOM_WALL):
+            var north: string = TILE_EMPTY
+            var south: string = TILE_EMPTY
+            var east: string = TILE_EMPTY
+            var west: string = TILE_EMPTY
+
+            if (y + 1 < GridHeight):
+                if (set north = tilemap[x][y + 1]) {}
+            if (y - 1 >= 0):
+                if (set south = tilemap[x][y - 1]) {}
+            if (x + 1 < GridWidth):
+                if (set east = tilemap[x + 1][y]) {}
+            if (x - 1 >= 0):
+                if (set west = tilemap[x - 1][y]) {}
+
+            var connectedDirections: int = 0
+
+            if (not north = TILE_EMPTY):
+                set connectedDirections += 1
+            if (not south = TILE_EMPTY):
+                set connectedDirections += 1
+            if (not east = TILE_EMPTY):
+                set connectedDirections += 1
+            if (not west = TILE_EMPTY):
+                set connectedDirections += 1
+
+            if (connectedDirections = 4):
+                return true
+            else:
+                return false
+        return false
+
     IsCrossingt(x: int, y: int)<transacts>: logic =
-        var north: string = TILE_EMPTY
-        var south: string = TILE_EMPTY
-        var east: string = TILE_EMPTY
-        var west: string = TILE_EMPTY
+            var north: string = TILE_EMPTY
+            var south: string = TILE_EMPTY
+            var east: string = TILE_EMPTY
+            var west: string = TILE_EMPTY
 
-        if (y + 1 < GridHeight):
-            if (set north = tilemap[x][y + 1]) {}
-        if (y - 1 >= 0):
-            if (set south = tilemap[x][y - 1]) {}
-        if (x + 1 < GridWidth):
-            if (set east = tilemap[x + 1][y]) {}
-        if (x - 1 >= 0):
-            if (set west = tilemap[x - 1][y]) {}
+            if (y + 1 < GridHeight):
+                if (set north = tilemap[x][y + 1]) {}
+            if (y - 1 >= 0):
+                if (set south = tilemap[x][y - 1]) {}
+            if (x + 1 < GridWidth):
+                if (set east = tilemap[x + 1][y]) {}
+            if (x - 1 >= 0):
+                if (set west = tilemap[x - 1][y]) {}
 
-        var connectedDirections: int = 0
+            var connectedDirections: int = 0
 
-        if (north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER):
-            set connectedDirections += 1
-        if (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER):
-            set connectedDirections += 1
-        if (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER):
-            set connectedDirections += 1
-        if (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER):
-            set connectedDirections += 1
+            if (north = TILE_CORRIDOR_FLOOR or north = TILE_ROOM_WALL or north = TILE_CORRIDOR_CORNER):
+                set connectedDirections += 1
+            if (south = TILE_CORRIDOR_FLOOR or south = TILE_ROOM_WALL or south = TILE_CORRIDOR_CORNER):
+                set connectedDirections += 1
+            if (east = TILE_CORRIDOR_FLOOR or east = TILE_ROOM_WALL or east = TILE_CORRIDOR_CORNER):
+                set connectedDirections += 1
+            if (west = TILE_CORRIDOR_FLOOR or west = TILE_ROOM_WALL or west = TILE_CORRIDOR_CORNER):
+                set connectedDirections += 1
 
-        if (connectedDirections = 4):
-            return true
-        else:
-            return false
+            if (connectedDirections = 4):
+                return true
+            else:
+                return false
+        
+
+
+    ###
+    # Function to identify corner entrances
+   
+
+    # Function to identify normal entrances
+    IdentifyNormalEntrances()<transacts>: []tuple(int,int) =
+        var normalEntrances: []tuple(int,int) = array{}
+        for (x := 0 .. GridWidth - 1):
+            for (y := 0 .. GridHeight - 1):
+               if(IsEntrance(x, y) = true):
+                    set normalEntrances += array{(x, y)}
+                    Print("Normal entrance found at X:{x}, Y:{y}")
+        return normalEntrances
+
+   
 

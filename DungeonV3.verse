@@ -357,11 +357,11 @@ DungeonV3:= class:
                         Sleep(0.04)
                         if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
                     }
-                    # "E" => {
-                    #     Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_ENTRANCE_PROP)
-                    #     Sleep(0.04)
-                    #     if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
-                    # }
+                    "E" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_ENTRANCE_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
                     _ =>
             
         
