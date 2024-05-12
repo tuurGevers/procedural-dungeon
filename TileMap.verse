@@ -305,10 +305,7 @@ TileMap := class:
         AlignCorridorsToWallsAndCorners()
         normalEntrances := IdentifyNormalEntrances()
     
-        # Optionally log detected entrances or take additional actions
-        for (entrance : normalEntrances):
-            SetTile(entrance(0), entrance(1), TILE_CORRIDOR_ENTRY, GetEntranceRotation(entrance(0), entrance(1)))
-            Print("Normal Entrance at X:{entrance(0)}, Y:{entrance(1)}")
+       
         # Return the final tilemap
         var result: [][]tuple(string, int) = array{}
         for (x := 0 .. GridWidth - 1):
@@ -403,7 +400,7 @@ TileMap := class:
             return false
 
     IsEntrance(x: int, y: int)<transacts>: logic =
-        if(tilemap[x][y] = TILE_ROOM_WALL):
+        if(tilemap[x][y] = TILE_ROOM_WALL or tilemap[x][y] = TILE_WALL_CORNER):
             var north: string = TILE_EMPTY
             var south: string = TILE_EMPTY
             var east: string = TILE_EMPTY
@@ -478,8 +475,24 @@ TileMap := class:
         for (x := 0 .. GridWidth - 1):
             for (y := 0 .. GridHeight - 1):
                if(IsEntrance(x, y) = true):
-                    set normalEntrances += array{(x, y)}
-                    Print("Normal entrance found at X:{x}, Y:{y}")
+                    var north: string = TILE_EMPTY
+                    var south: string = TILE_EMPTY
+                    var east: string = TILE_EMPTY
+                    var west: string = TILE_EMPTY
+
+                    if (y + 1 < GridHeight):
+                        if (set north = tilemap[x][y + 1]) {}
+                    if (y - 1 >= 0):
+                        if (set south = tilemap[x][y - 1]) {}
+                    if (x + 1 < GridWidth):
+                        if (set east = tilemap[x + 1][y]) {}
+                    if (x - 1 >= 0):
+                        if (set west = tilemap[x - 1][y]) {}
+
+                    if(not north = TILE_CORRIDOR_ENTRY and not south = TILE_CORRIDOR_ENTRY and not east = TILE_CORRIDOR_ENTRY and not west = TILE_CORRIDOR_ENTRY):
+                        set normalEntrances += array{(x, y)}
+                        SetTile(x, y, TILE_CORRIDOR_ENTRY, GetEntranceRotation(x, y))
+                        Print("Normal entrance found at X:{x}, Y:{y}")
         return normalEntrances
 
    
