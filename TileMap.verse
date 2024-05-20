@@ -11,7 +11,7 @@ TileMap := class:
     TILE_CORRIDOR_CORNER: string = "CC"
     TILE_CORRIDOR_TPOINT: string = "CT"
     TILE_CORRIDOR_CROSSING: string = "X"
-
+    TILE_CORRIDOR_CORNER_ENTRY : string = "CE"
     NorthProp:creative_prop_asset
     EastProp:creative_prop_asset
     WestProp:creative_prop_asset
@@ -207,8 +207,14 @@ TileMap := class:
         if (x - 1 >= 0):
             if (set west = tilemap[x - 1][y]) {}
 
-        if ((west = TILE_CORRIDOR_FLOOR or west = TILE_CORRIDOR_CORNER or west = TILE_CORRIDOR_CROSSING or west =TILE_CORRIDOR_TPOINT) or (east = TILE_CORRIDOR_FLOOR or east = TILE_CORRIDOR_CORNER or east = TILE_CORRIDOR_CROSSING or east =TILE_CORRIDOR_TPOINT) ):
+        if ((west = TILE_CORRIDOR_FLOOR or west = TILE_CORRIDOR_CORNER or west = TILE_CORRIDOR_CROSSING or west =TILE_CORRIDOR_TPOINT)  ):
             return 90  # Corridor running horizontally
+        else if ((east = TILE_CORRIDOR_FLOOR or east = TILE_CORRIDOR_CORNER or east = TILE_CORRIDOR_CROSSING or east =TILE_CORRIDOR_TPOINT)):
+            return-90  # Corridor running horizontally
+        else if ((north = TILE_CORRIDOR_FLOOR or north = TILE_CORRIDOR_CORNER or north = TILE_CORRIDOR_CROSSING or north =TILE_CORRIDOR_TPOINT)):
+            return 0  # Corridor running vertically
+        else if ((south = TILE_CORRIDOR_FLOOR or south = TILE_CORRIDOR_CORNER or south = TILE_CORRIDOR_CROSSING or south =TILE_CORRIDOR_TPOINT)):
+            return 180  # Corridor running vertically
 
 
         return 0  # Default orientation
@@ -466,8 +472,6 @@ TileMap := class:
             else:
                 return false
         
-
-
     ###
     # Function to identify corner entrances
     PostProcessTileMap()<transacts>: void =
@@ -524,14 +528,21 @@ TileMap := class:
                         SetTile(x, y, TILE_CORRIDOR_ENTRY, GetEntranceRotation(x, y))
                         Print("Normal entrance found at X:{x}, Y:{y}")
     
+                    var Conenctions:int = 0
+                    if (not north = TILE_CORRIDOR_ENTRY ):
+                        set Conenctions += 1
+                    if (not south = TILE_CORRIDOR_ENTRY ):
+                        set Conenctions += 1
+                    if (not east = TILE_CORRIDOR_ENTRY ):
+                        set Conenctions += 1
+                    if (not west = TILE_CORRIDOR_ENTRY ):
+                        set Conenctions += 1
+
                     # Handle corner entrances
-                    if (tilemap[x][y] = TILE_WALL_CORNER):
-                        if (north = TILE_CORRIDOR_FLOOR or north = TILE_CORRIDOR_CORNER or north = TILE_CORRIDOR_TPOINT or north = TILE_CORRIDOR_CROSSING or
-                            south = TILE_CORRIDOR_FLOOR or south = TILE_CORRIDOR_CORNER or south = TILE_CORRIDOR_TPOINT or south = TILE_CORRIDOR_CROSSING or
-                            east = TILE_CORRIDOR_FLOOR or east = TILE_CORRIDOR_CORNER or east = TILE_CORRIDOR_TPOINT or east = TILE_CORRIDOR_CROSSING or
-                            west = TILE_CORRIDOR_FLOOR or west = TILE_CORRIDOR_CORNER or west = TILE_CORRIDOR_TPOINT or west = TILE_CORRIDOR_CROSSING):
+                    if (tilemap[x][y] = TILE_WALL_CORNER or tilemap[x][y] = TILE_CORRIDOR_ENTRY):
+                        if (Conenctions = 3):
                             set normalEntrances += array{(x, y)}
-                            SetTile(x, y, TILE_CORRIDOR_ENTRY, GetEntranceRotation(x, y))
+                            SetTile(x, y, TILE_CORRIDOR_CORNER_ENTRY, GetEntranceRotation(x, y))
                             Print("Corner entrance found at X:{x}, Y:{y}")
         return normalEntrances
     

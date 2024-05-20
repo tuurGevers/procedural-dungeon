@@ -32,11 +32,12 @@ TILE_CORRIDOR_FLOOR_PROP : creative_prop_asset,
 TILE_CORRIDOR_CROSSING_PROP : creative_prop_asset,
 TILE_CORRIDOR_ENTRANCE_PROP : creative_prop_asset,
 TILE_CORRIDOR_CORNER_PROP: creative_prop_asset,
-TILE_CORRIDOR_TPOINT_PROP: creative_prop_asset
+TILE_CORRIDOR_TPOINT_PROP: creative_prop_asset,
+TILE_CORRIDOR_CORNER_ENTRANCE_PROP: creative_prop_asset
 
 ): DungeonV3 =
     # Implementation to create a dungeon
-    dungeon:= DungeonV3{Width:=30, Height:=30, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube, 
+    dungeon:= DungeonV3{Width:=30, Height:=30, PreferedRooms:=PreferredRooms, CombatCube:=CombatCube,     TILE_CORRIDOR_CORNER_ENTRANCE_PROP:= TILE_CORRIDOR_CORNER_ENTRANCE_PROP,
     LinePropAsset:=LinePropAsset, BossCube:=BossCube, DebugCube:=DebugCube, DebugLinePropAsset:=DebugLinePropAsset, AStarLinePropAsset:=AStarLinePropAsset, PropSize:=PropSize,
     TILE_ROOM_FLOOR_PROP:=TILE_ROOM_FLOOR_PROP, TILE_ROOM_WALL_PROP:=TILE_ROOM_WALL_PROP, TILE_WALL_CORNER_PROP:=TILE_WALL_CORNER_PROP, TILE_CORRIDOR_FLOOR_PROP:=TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP:=TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_ENTRANCE_PROP:=TILE_CORRIDOR_ENTRANCE_PROP, TILE_CORRIDOR_CORNER_PROP:=TILE_CORRIDOR_CORNER_PROP, TILE_CORRIDOR_TPOINT_PROP:=TILE_CORRIDOR_TPOINT_PROP}
     spawn. dungeon.Generate(MinRoomSize, MaxRoomSize, MinBuffer)
@@ -96,6 +97,7 @@ DungeonV3:= class:
     TILE_CORRIDOR_ENTRANCE_PROP : creative_prop_asset
     TILE_CORRIDOR_CORNER_PROP: creative_prop_asset
     TILE_CORRIDOR_TPOINT_PROP: creative_prop_asset
+    TILE_CORRIDOR_CORNER_ENTRANCE_PROP: creative_prop_asset
     CombatCube: creative_prop_asset 
     LinePropAsset : creative_prop_asset
     BossCube : creative_prop_asset
@@ -359,6 +361,11 @@ DungeonV3:= class:
                     }
                     "E" => {
                         Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_ENTRANCE_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
+                    "CE" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CORNER_ENTRANCE_PROP)
                         Sleep(0.04)
                         if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
                     }
