@@ -56,9 +56,13 @@ RoomV4 := class:
                         set StartPoint.X = potentialX
                         set StartPoint.Y = potentialY
                         # Mark the grid as occupied
-                        for (x:= potentialX..potentialX + Width ):
-                            for (y := potentialY..potentialY + Height ):
-                                if(set Parent.OccupancyGrid[x][y] = 1){}
+                        if(HalfWidth:=Floor[Width*1.0/2.0]):
+                            if(HalfHeight:=Floor[Height*1.0/2.0]):
+                                
+                                for (x:= potentialX-HalfWidth..potentialX + HalfWidth ):
+                                    for (y := potentialY-HalfHeight..potentialY + HalfHeight ):
+                                        if(set Parent.OccupancyGrid[x][y] = 1){}
+                                        SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 1200.0},Parent.BossCube)
                         break
             
         Print("StartPoint: {StartPoint.X} , {StartPoint.Y}")
@@ -203,6 +207,7 @@ DungeonV4 := class:
 
         if(Final = true):
             for(index->I: PathResult):
+                Sleep(0.05)
                 SpawnLocation := vector3{X := I.X * 500.0, Y := I.Y * 500.0, Z := 75.0}
                 SpawnTarget(SpawnLocation, BossCube)
 

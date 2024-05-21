@@ -9,7 +9,7 @@ AStarV3 := class:
     var GridHeight: int = 0
     DebugCube: creative_prop_asset
     FinalCube: creative_prop_asset
-    HeuristicWeight: float = 20.0
+    HeuristicWeight: float = 800.0
     TurnPenalty: float = 20.0
 
     # Initialize the occupancy grid
@@ -33,18 +33,19 @@ AStarV3 := class:
             newY := node.Y + direction(1)
             if(newX >= 0 and newX < GridWidth and newY >= 0 and newY < GridHeight):
                 if(var Cost: float = OccupancyGrid[newX][newY] * 1.0, FlooredCost:= Floor[Cost]):
-                    # Apply the turn penalty if changing direction
-                    if(not direction(0) = prevDirection(0) or not direction(1) = prevDirection(1)):
-                        set Cost += TurnPenalty
+                    if(not FlooredCost=1):
+                        # Apply the turn penalty if changing direction
+                        if(not direction(0) = prevDirection(0) or not direction(1) = prevDirection(1)):
+                            set Cost += TurnPenalty
 
-                    case (FlooredCost):
-                        1 => set Cost += 150000.0  # Room goal point
-                        _   => 
+                        case (FlooredCost):
+                            1 => set Cost += 1500000.0  # Room goal point
+                            _   => 
 
-                    
+                        
 
-                    NewPoint := CreatePoint(newX, newY)
-                    set neighbors += array{(NewPoint, Cost, direction)}
+                        NewPoint := CreatePoint(newX, newY)
+                        set neighbors += array{(NewPoint, Cost, direction)}
         return neighbors
 
     
