@@ -538,12 +538,12 @@ TileMap := class:
                     if (not west = TILE_CORRIDOR_ENTRY ):
                         set Conenctions += 1
 
+                    Print("Connections: {Conenctions}")
                     # Handle corner entrances
-                    if (tilemap[x][y] = TILE_WALL_CORNER or tilemap[x][y] = TILE_CORRIDOR_ENTRY):
-                        if (Conenctions = 3):
-                            set normalEntrances += array{(x, y)}
-                            SetTile(x, y, TILE_CORRIDOR_CORNER_ENTRY, GetEntranceRotation(x, y))
-                            Print("Corner entrance found at X:{x}, Y:{y}")
+                    if (Conenctions = 3):
+                        set normalEntrances += array{(x, y)}
+                        SetTile(x, y, TILE_CORRIDOR_CORNER_ENTRY, GetEntranceRotation(x, y))
+                        Print("Corner entrance found at X:{x}, Y:{y}")
         return normalEntrances
     
 

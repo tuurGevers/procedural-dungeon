@@ -101,7 +101,7 @@ DungeonV3:= class:
     CombatCube: creative_prop_asset 
     LinePropAsset : creative_prop_asset
     BossCube : creative_prop_asset
-    DebugCube: creative_prop_asset
+    DebugCube : creative_prop_asset
     DebugLinePropAsset: creative_prop_asset
     AStarLinePropAsset:creative_prop_asset
     PropSize:float
