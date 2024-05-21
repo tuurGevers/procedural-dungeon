@@ -120,6 +120,8 @@ AStarV3 := class:
                 if(OccupancyGrid[LocalCurrent.X][LocalCurrent.Y] = 0 or OccupancyGrid[LocalCurrent.X][LocalCurrent.Y] =9 ):  # Mark open space value as 0 
                     
                     set totalPath = array{LocalCurrent} + totalPath
+                    if(set OccupancyGrid[LocalCurrent.X][LocalCurrent.Y] = 2){}
+                        
 
                
         return totalPath

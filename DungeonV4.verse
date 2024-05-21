@@ -181,6 +181,12 @@ DungeonV4 := class:
 
        
         set OccupancyGrid = AStar3.OccupancyGrid
+        for(X:OccupancyGrid):
+            var arr:string = ""
+            for(Y:X):
+                set arr += "{Y} "
+            Print("{arr}")
+                
         # MergeParallelCorridors()
 
         for(edge: MSTEdges):
@@ -206,6 +212,7 @@ DungeonV4 := class:
         )
 
         if(Final = true):
+            set OccupancyGrid = AStar.OccupancyGrid
             for(index->I: PathResult):
                 Sleep(0.05)
                 SpawnLocation := vector3{X := I.X * 500.0, Y := I.Y * 500.0, Z := 75.0}
