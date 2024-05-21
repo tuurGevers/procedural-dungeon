@@ -222,8 +222,8 @@ DungeonV3:= class:
         
 
         #
-         # Create all pairs for MST edges
-         for(i := 0 .. RoomEntryPoints.Length - 1):
+        # Create all pairs for MST edges
+        for(i := 0 .. RoomEntryPoints.Length - 1):
             for(j := i + 1 .. RoomEntryPoints.Length - 1):
                 if(set RoomPairs += array{(RoomEntryPoints[i], RoomEntryPoints[j])}){}
                 

@@ -16,6 +16,10 @@ DungeonAsset := class<concrete>:
 
 DungeonMainV4 := class(creative_device):
     @editable DungeonProps: []DungeonAsset = array{}
+    @editable DebugProp: creative_prop_asset = DefaultCreativePropAsset
+    @editable LinePropAsset : creative_prop_asset = DefaultCreativePropAsset
+    @editable CombatCube: creative_prop_asset = DefaultCreativePropAsset
+
     DungeonWidth: float = 20000.0  # Total width of the dungeon in world units
     DungeonHeight: float = 20000.0 # Total height of the dungeon
     TileSize: float = 500.0       # Size of each tile in world units
@@ -24,21 +28,28 @@ DungeonMainV4 := class(creative_device):
     var Rooms: []RoomV4 = array{}
     
     OnBegin<override>()<suspends>: void =
+        dungeon:=DungeonV4{LinePropAsset:=LinePropAsset, DebugCube:=DebugProp, BossCube:=CombatCube}
         if:
             set GridWidth = Floor[DungeonWidth / TileSize]
             set GridHeight = Floor[DungeonHeight / TileSize]
         Print("GridWidth: {GridWidth}, GridHeight: {GridHeight}")    
-        InitializeRooms()
+        dungeon.InitOccupancyGrid(GridWidth, GridHeight)
+        InitializeRooms(dungeon)
 
-    InitializeRooms()<suspends>: void =
+    InitializeRooms(dungeon:DungeonV4)<suspends>: void =
         for( asset : DungeonProps):
             for(I:=0..asset.Amount-1):
                 Print("Placing room  Size: {asset.Size.X}x{asset.Size.Y}")
-                room := RoomV4{Asset := asset, TileSize := TileSize, EntrancePoint:=PointV2{X:=asset.Entrance.X, Y:=asset.Entrance.Y}}
-                room.InitDimensions()
-                room.PlaceRandomly(DungeonWidth, DungeonHeight) 
-                room.RotateRandomly()
-                room.SpawnRoom()
-                set Rooms += array{room}
-                Print("Room placed at X: {room.StartPoint.X}, Y: {room.StartPoint.Y} with rotation {room.Rotation}")
+                if(FlooredEntranceX:=Floor[asset.Entrance.X], FlooredEntranceY:=Floor[asset.Entrance.Y]):
+                    room := RoomV4{Asset := asset, TileSize := TileSize, EntrancePoint:=CreatePoint(FlooredEntranceX,FlooredEntranceY), Parent:=dungeon}
+                    room.InitDimensions()
+                    room.PlaceRandomly(DungeonWidth, DungeonHeight) 
+                    room.RotateRandomly()
+                    room.SpawnRoom()
+                    room.RotateEntrance()
+                    room.MarkEntrance(DebugProp)
+                    set Rooms += array{room}
+                    Print("Room placed at X: {room.StartPoint.X}, Y: {room.StartPoint.Y} with rotation {room.Rotation}")
 
+        set dungeon.RoomList = Rooms
+        dungeon.InitPathFinding()
