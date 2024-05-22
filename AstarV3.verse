@@ -40,6 +40,8 @@ AStarV3 := class:
 
                         case (FlooredCost):
                             1 => set Cost += 1500000.0  # Room goal point
+                            2 => set Cost += 0.0  # Corridor
+                            0 => set Cost += 400.0  # Open space
                             _   => 
 
                         

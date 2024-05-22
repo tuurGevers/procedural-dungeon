@@ -56,13 +56,13 @@ RoomV4 := class:
                         set StartPoint.X = potentialX
                         set StartPoint.Y = potentialY
                         # Mark the grid as occupied
-                        if(HalfWidth:=Floor[Width*1.0/2.0]):
-                            if(HalfHeight:=Floor[Height*1.0/2.0]):
+                        # if(HalfWidth:=Floor[Width*1.0/2.0]):
+                        #     if(HalfHeight:=Floor[Height*1.0/2.0]):
                                 
-                                for (x:= potentialX-HalfWidth..potentialX + HalfWidth ):
-                                    for (y := potentialY-HalfHeight..potentialY + HalfHeight ):
-                                        if(set Parent.OccupancyGrid[x][y] = 1){}
-                                        SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 1200.0},Parent.BossCube)
+                        #         for (x:= potentialX-HalfWidth..potentialX + HalfWidth ):
+                        #             for (y := potentialY-HalfHeight..potentialY + HalfHeight ):
+                        #                 if(set Parent.OccupancyGrid[x][y] = 1){}
+                        #                 SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 1200.0},Parent.BossCube)
                         break
             
         Print("StartPoint: {StartPoint.X} , {StartPoint.Y}")
@@ -107,8 +107,17 @@ DungeonV4 := class:
     LinePropAsset:creative_prop_asset
     BossCube:creative_prop_asset
     DebugCube:creative_prop_asset
+    TILE_CORRIDOR_FLOOR_PROP:creative_prop_asset
+    TILE_CORRIDOR_CROSSING_PROP : creative_prop_asset
+    TILE_CORRIDOR_CORNER_PROP: creative_prop_asset
+    TILE_CORRIDOR_TPOINT_PROP: creative_prop_asset
+    Parent:DungeonMainV4
+    var GridWidth:int=0
+    var GridHeight:int=0
 
     InitOccupancyGrid(Width:int, Height:int): void =
+        set GridWidth = Width
+        set GridHeight = Height
         for(I:=0..Width-1):
             set OccupancyGrid+= array{array{}}
             for(J:=0..Height-1):
@@ -169,18 +178,23 @@ DungeonV4 := class:
 
         var AIndex2:int = 0
         
-
+        var AllProps: []creative_prop = array{}      
         loop:
             if(MSTEdge:=MSTEdges[AIndex2]):
-                AStarAsync(MSTEdge, AStar3, ?Final:=true)
+                set AllProps += AStarAsync(MSTEdge, AStar3, ?Final:=true)
                 
             set AIndex2+=1
 
             if(AIndex2>= MSTEdges.Length):
                 break
 
+        for(prop:AllProps):
+            prop.Dispose()
        
         set OccupancyGrid = AStar3.OccupancyGrid
+        for(room:RoomList):
+            if(set OccupancyGrid[room.StartPoint.X+room.EntrancePoint.X][room.StartPoint.Y+room.EntrancePoint.Y] = 3){}
+            
         for(X:OccupancyGrid):
             var arr:string = ""
             for(Y:X):
@@ -189,9 +203,46 @@ DungeonV4 := class:
                 
         # MergeParallelCorridors()
 
-        for(edge: MSTEdges):
-            if(set OccupancyGrid[edge.Point1.X][edge.Point1.Y] = 1){}
-            if(set OccupancyGrid[edge.Point2.X][edge.Point2.Y] = 1){}
+        tilemappingV4 := TileMapV4{ParentDungeon:=Self}
+        FinalTiles:= tilemappingV4.GenerateTileMapping(OccupancyGrid)
+
+        for(IndexI->I:FinalTiles):
+            var PrintRow : string = ""
+
+            for(IndexJ->J:I):
+                tileType := J(0)
+                rot := J(1)
+                SpawnLocation := vector3{X := IndexI * 500.0, Y := IndexJ * 500.0, Z := 50.0}
+
+                set PrintRow+= "{J(0)}"
+                case(J(0)):
+                    "C" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_FLOOR_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
+                    "X" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CROSSING_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
+                    "CC" => {
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_CORNER_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
+                    "CT" => {
+                        Print("TPoint")
+                        Prop := SpawnTarget(SpawnLocation, TILE_CORRIDOR_TPOINT_PROP)
+                        Sleep(0.04)
+                        if(Prop.TeleportTo[SpawnLocation, Prop.GetTransform().Rotation.ApplyYaw(DegreesToRadians(rot * 1.0))]){}
+                    }
+                    _=>{}
+            Print("{PrintRow}")
+
+        for(Player:Parent.GetPlayspace().GetPlayers()):
+            if(FC:=Player.GetFortCharacter[], StartRoom:=RoomList[0]):
+                if(FC.TeleportTo[StartRoom.RoomProp.GetTransform().Translation, FC.GetTransform().Rotation]){}
 
     # Function to sort edge points by ID to ensure consistency
     SortEdgePoints(edge: tuple(Point, Point)): tuple(Point, Point) =
@@ -202,7 +253,7 @@ DungeonV4 := class:
 
  
     #
-    AStarAsync(MSTEdge: Edge, AStar: AStarV3, ?Final: logic = false)<suspends>: void =
+    AStarAsync(MSTEdge: Edge, AStar: AStarV3, ?Final: logic = false)<suspends>: []creative_prop =
       
         var SelectedStartPoint: Point = MSTEdge.Point1
         var SelectedEndPoint: Point = MSTEdge.Point2
@@ -210,13 +261,14 @@ DungeonV4 := class:
         PathResult := AStar.Search(
             SelectedStartPoint, SelectedEndPoint
         )
-
+        var Props: []creative_prop = array{}
         if(Final = true):
             set OccupancyGrid = AStar.OccupancyGrid
             for(index->I: PathResult):
                 Sleep(0.05)
                 SpawnLocation := vector3{X := I.X * 500.0, Y := I.Y * 500.0, Z := 75.0}
-                SpawnTarget(SpawnLocation, BossCube)
+                set Props+= array{SpawnTarget(SpawnLocation, BossCube)}
+        return Props
 
        
 

@@ -19,6 +19,10 @@ DungeonMainV4 := class(creative_device):
     @editable DebugProp: creative_prop_asset = DefaultCreativePropAsset
     @editable LinePropAsset : creative_prop_asset = DefaultCreativePropAsset
     @editable CombatCube: creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_FLOOR_PROP:creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_CROSSING_PROP : creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_CORNER_PROP: creative_prop_asset = DefaultCreativePropAsset
+    @editable TILE_CORRIDOR_TPOINT_PROP: creative_prop_asset= DefaultCreativePropAsset
 
     DungeonWidth: float = 20000.0  # Total width of the dungeon in world units
     DungeonHeight: float = 20000.0 # Total height of the dungeon
@@ -28,7 +32,7 @@ DungeonMainV4 := class(creative_device):
     var Rooms: []RoomV4 = array{}
     
     OnBegin<override>()<suspends>: void =
-        dungeon:=DungeonV4{LinePropAsset:=LinePropAsset, DebugCube:=DebugProp, BossCube:=CombatCube}
+        dungeon:=DungeonV4{Parent:=Self, LinePropAsset:=LinePropAsset, DebugCube:=DebugProp, BossCube:=CombatCube, TILE_CORRIDOR_FLOOR_PROP:=TILE_CORRIDOR_FLOOR_PROP, TILE_CORRIDOR_CROSSING_PROP:=TILE_CORRIDOR_CROSSING_PROP, TILE_CORRIDOR_CORNER_PROP:=TILE_CORRIDOR_CORNER_PROP, TILE_CORRIDOR_TPOINT_PROP:=TILE_CORRIDOR_TPOINT_PROP}
         if:
             set GridWidth = Floor[DungeonWidth / TileSize]
             set GridHeight = Floor[DungeonHeight / TileSize]
