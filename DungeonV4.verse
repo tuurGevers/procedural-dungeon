@@ -85,7 +85,7 @@ RoomV4 := class:
 
     SpawnRoom()<suspends>: void =
         # Convert grid position to world coordinates
-        Location := vector3{X:= StartPoint.X * TileSize, Y:= StartPoint.Y * TileSize, Z:= 0.0}
+        Location := vector3{X:= StartPoint.X * TileSize, Y:= StartPoint.Y * TileSize, Z:= Parent.FloorHeight*1000.0}
         set RoomProp= SpawnTarget(Location, Asset.Asset)
         if(RoomProp.TeleportTo[Location,RoomProp.GetTransform().Rotation.ApplyYaw(DegreesToRadians(Rotation*1.0))]){}
         Print("Room spawned at {Location}")
@@ -97,7 +97,7 @@ RoomV4 := class:
             EntranceLocation := vector3{
                 X:= (StartPoint.X + EntrancePoint.X) * TileSize,
                 Y:= (StartPoint.Y + EntrancePoint.Y) * TileSize,
-                Z:= 50.0  # Slightly above the ground for visibility
+                Z:= Parent.FloorHeight *1000.0  # Slightly above the ground for visibility
             }        
             SpawnTarget(EntranceLocation, DebugProp)
             Print("Entrance marked at {EntranceLocation}")
@@ -116,6 +116,7 @@ DungeonV4 := class:
     Parent:DungeonMainV4
     var GridWidth:int=0
     var GridHeight:int=0
+    FloorHeight:int
 
     InitOccupancyGrid(Width:int, Height:int): void =
         set GridWidth = Width
@@ -231,7 +232,7 @@ DungeonV4 := class:
             for(IndexJ->J:I):
                 tileType := J(0)
                 rot := J(1)
-                SpawnLocation := vector3{X := IndexI * 500.0, Y := IndexJ * 500.0, Z := 50.0}
+                SpawnLocation := vector3{X := IndexI * 500.0, Y := IndexJ * 500.0, Z := FloorHeight *1000.0}
 
                 set PrintRow+= "{J(0)}"
                 case(J(0)):
@@ -263,7 +264,7 @@ DungeonV4 := class:
             if(FC:=Player.GetFortCharacter[], StartRoom:=RoomList[0]):
                 Sleep(0.1)
                 Trans:=StartRoom.RoomProp.GetTransform().Translation
-                if(FC.TeleportTo[vector3{X:=Trans.X, Y:=Trans.Y, Z:=Trans.Z+50.0}, FC.GetTransform().Rotation]){}
+                # if(FC.TeleportTo[vector3{X:=Trans.X, Y:=Trans.Y, Z:=Trans.Z+50.0}, FC.GetTransform().Rotation]){}
 
     # Function to sort edge points by ID to ensure consistency
     SortEdgePoints(edge: tuple(Point, Point)): tuple(Point, Point) =
@@ -287,7 +288,7 @@ DungeonV4 := class:
             set OccupancyGrid = AStar.OccupancyGrid
             for(index->I: PathResult):
                 Sleep(0.05)
-                SpawnLocation := vector3{X := I.X * 500.0, Y := I.Y * 500.0, Z := 75.0}
+                SpawnLocation := vector3{X := I.X * 500.0, Y := I.Y * 500.0, Z := FloorHeight *1000.0}
                 set Props+= array{SpawnTarget(SpawnLocation, BossCube)}
         return Props
 

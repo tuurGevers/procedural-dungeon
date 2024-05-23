@@ -17,6 +17,7 @@ DungeonAssetV5 := class<concrete>:
 
 DungeonMainV5 := class(creative_device):
     @editable DungeonProps: []DungeonAssetV5 = array{}
+    @editable ConnectingAssets: []DungeonAssetV5 = array{}
     @editable DebugProp: creative_prop_asset = DefaultCreativePropAsset
     @editable LinePropAsset: creative_prop_asset = DefaultCreativePropAsset
     @editable CombatCube: creative_prop_asset = DefaultCreativePropAsset
@@ -27,7 +28,7 @@ DungeonMainV5 := class(creative_device):
 
     DungeonWidth: float = 20000.0  # Total width of the dungeon in world units
     DungeonHeight: float = 20000.0 # Total height of the dungeon
-    DungeonDepth: float = 5000.0   # Total depth or number of floors in the dungeon
+    DungeonDepth: float = 3000.0   # Total depth or number of floors in the dungeon
     TileSize: float = 500.0        # Size of each tile in world units
     TileHeight: float = 1000.0        # Size of each tile in world units
 
@@ -45,12 +46,33 @@ DungeonMainV5 := class(creative_device):
             set GridDepth = Floor[DungeonDepth / TileHeight]
         Print("GridWidth: {GridWidth}, GridHeight: {GridHeight}, GridDepth: {GridDepth}")    
         dungeon.InitOccupancyGrid(GridWidth, GridHeight, GridDepth)
+        Sleep(1.0)
+        InitializeConnectionRoom(dungeon)
         InitializeRooms(dungeon)
+
+
+    InitializeConnectionRoom(dungeon:DungeonV5)<suspends>: void =
+        for(I:=0..GridDepth-2):
+            for(asset:ConnectingAssets):
+                for(AssetCount:=0..asset.Amount-1):
+                    var FlooredPoints: []Point3D = array{}
+                    for(EntrancePoint: asset.Entrance):
+                        if(FlooredX:=Floor[EntrancePoint.X], FlooredY:=Floor[EntrancePoint.Y], FlooredZ:=Floor[EntrancePoint.Z]):
+                            set FlooredPoints += array{Point3D{X:=FlooredX, Y:=FlooredY, Z:=FlooredZ}}
+                    room := RoomV5{Asset := asset, TileSize := TileSize,TileHeight:=TileHeight ,EntrancePoints:=FlooredPoints, Parent:=dungeon}
+                    room.InitDimensions()
+                    room.PlaceRandomlyOnFloor(DungeonWidth, DungeonHeight,I ) 
+                    room.RotateRandomly()
+                    room.SpawnRoom()
+                    room.RotateEntrance()
+                    room.MarkEntrance(DebugProp)
+                    set Rooms += array{room}
+
+
 
     InitializeRooms(dungeon:DungeonV5)<suspends>: void =
         for(asset: DungeonProps):
             for(I:=0..asset.Amount-1):
-                Print("Placing room  Size: {asset.Size.X}x{asset.Size.Y}x{asset.Size.Z}")
                 var FlooredPoints: []Point3D = array{}
                 for(EntrancePoint: asset.Entrance):
                     if(FlooredX:=Floor[EntrancePoint.X], FlooredY:=Floor[EntrancePoint.Y], FlooredZ:=Floor[EntrancePoint.Z]):
@@ -62,8 +84,8 @@ DungeonMainV5 := class(creative_device):
                 room.SpawnRoom()
                 room.RotateEntrance()
                 room.MarkEntrance(DebugProp)
-                set Rooms += array{room}
-                Print("Room placed at X: {room.StartPoint.X}, Y: {room.StartPoint.Y}, Z: {room.StartPoint.Z} with rotation {room.Rotation}")
+                if(room.IsPlaced=true):
+                    set Rooms += array{room}
 
         set dungeon.RoomList = Rooms
-        # dungeon.InitPathFinding()
+        dungeon.PathFindFloors()

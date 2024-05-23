@@ -47,7 +47,6 @@ UnionFind := class:
             set Parent += array{i}  # Initially, each element is its own parent
             set Rank += array{0}  # Initially, each element has a rank of 0
 
-        Print("UnionFind Initialized with size: {size} parent: {Parent.Length}, Rank: {Rank.Length}")
     Find(x: int, ?Depth: int = 0)<transacts>: ?int =
         #Print("Finding root for: {x}, Depth: {Depth}")
         if (Parent[x] ):  # Ensure x is a valid index
@@ -74,19 +73,15 @@ UnionFind := class:
                 # Union by rank
                 if (Rank[rootXFound] > Rank[rootYFound]):
                     if(set Parent[rootYFound] = rootXFound):
-                        Print("Union done between {x} and {y}, New Roots: {rootXFound}, {rootYFound}")
                 else if (Rank[rootXFound] < Rank[rootYFound]):
                     if(set Parent[rootXFound] = rootYFound):
-                        Print("Union done between {x} and {y}, New Roots: {rootXFound}, {rootYFound}")
                 else:
                     if(set Parent[rootYFound] = rootXFound):
                         if(set Rank[rootXFound] += 1):
                             Print("Union done between {x} and {y}, New Roots: {rootXFound}, {rootYFound}")
                 #Print("Union done between {x} and {y}, New Roots: {rootXFound}, {rootYFound}")
-            else:
-                Print("No union needed: {x} and {y} are already in the same component")
-        else:
-            Print("Error: in union: Could not find roots for {x} and/or {y}")
+            
+       
             
 
 
