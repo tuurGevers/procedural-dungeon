@@ -11,7 +11,7 @@ using { /UnrealEngine.com/Temporary/UI }
 DungeonAsset := class<concrete>:
     @editable Asset: creative_prop_asset = DefaultCreativePropAsset
     @editable Size: vector2 = vector2{X:=1.0, Y:=1.0}
-    @editable Entrance:vector2 = vector2{X:=0.0, Y:=0.0}
+    @editable Entrance:[]vector2 = array{vector2{X:=0.0, Y:=0.0}}
     @editable Amount:int = 1
 
 DungeonMainV4 := class(creative_device):
@@ -44,16 +44,18 @@ DungeonMainV4 := class(creative_device):
         for( asset : DungeonProps):
             for(I:=0..asset.Amount-1):
                 Print("Placing room  Size: {asset.Size.X}x{asset.Size.Y}")
-                if(FlooredEntranceX:=Floor[asset.Entrance.X], FlooredEntranceY:=Floor[asset.Entrance.Y]):
-                    room := RoomV4{Asset := asset, TileSize := TileSize, EntrancePoint:=CreatePoint(FlooredEntranceX,FlooredEntranceY), Parent:=dungeon}
-                    room.InitDimensions()
-                    room.PlaceRandomly(DungeonWidth, DungeonHeight) 
-                    room.RotateRandomly()
-                    room.SpawnRoom()
-                    room.RotateEntrance()
-                    room.MarkEntrance(DebugProp)
-                    set Rooms += array{room}
-                    Print("Room placed at X: {room.StartPoint.X}, Y: {room.StartPoint.Y} with rotation {room.Rotation}")
+                var FlooredPoints:[]Point = array{}
+                for(EntrancePoint:asset.Entrance):
+                    if(set FlooredPoints += array{CreatePoint(X:=Floor[EntrancePoint.X], Y:=Floor[EntrancePoint.Y])}){}
+                room := RoomV4{Asset := asset, TileSize := TileSize, EntrancePoints:=FlooredPoints, Parent:=dungeon}
+                room.InitDimensions()
+                room.PlaceRandomly(DungeonWidth, DungeonHeight) 
+                room.RotateRandomly()
+                room.SpawnRoom()
+                room.RotateEntrance()
+                room.MarkEntrance(DebugProp)
+                set Rooms += array{room}
+                Print("Room placed at X: {room.StartPoint.X}, Y: {room.StartPoint.Y} with rotation {room.Rotation}")
 
         set dungeon.RoomList = Rooms
         dungeon.InitPathFinding()

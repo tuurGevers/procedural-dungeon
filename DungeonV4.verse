@@ -9,9 +9,6 @@ using { /Fortnite.com/Game }
 using { /UnrealEngine.com/Temporary/UI }
 using { /Verse.org/Simulation/Tags }
 
-PointV2 := class<concrete>:
-    var X: int = 0
-    var Y: int = 0
 
     # Function
 # Function to create a room
@@ -19,7 +16,7 @@ RoomV4 := class:
     Asset: DungeonAsset
     var StartPoint: Point = Point{X:=0, Y:=0, UUID:="", ID:=0}
     var EndPoint: Point = Point{X:=0, Y:=0, UUID:="", ID:=0}
-    var EntrancePoint: Point = Point{X:=0, Y:=0, UUID:="", ID:=0}
+    var EntrancePoints: []Point = array{}
     var Width: int :=0
     var Height: int :=0
     var Rotation:int=0
@@ -41,6 +38,8 @@ RoomV4 := class:
     CheckRoomPlacement(startX: int, startY: int, roomWidth: int, roomHeight: int)<transacts>: logic =
                 for (x:= startX-2..startX + roomWidth + 2):
                     for (y := startY-2..startY + roomHeight + 2):
+                        if(not Parent.OccupancyGrid[x][y]):
+                            return false
                         if (Parent.OccupancyGrid[x][y] <> 0):  # Assumes 0 is unoccupied
                             return false
         return true
@@ -56,13 +55,13 @@ RoomV4 := class:
                         set StartPoint.X = potentialX
                         set StartPoint.Y = potentialY
                         # Mark the grid as occupied
-                        # if(HalfWidth:=Floor[Width*1.0/2.0]):
-                        #     if(HalfHeight:=Floor[Height*1.0/2.0]):
+                        if(HalfWidth:=Floor[Width*1.0/2.0]):
+                            if(HalfHeight:=Floor[Height*1.0/2.0]):
                                 
-                        #         for (x:= potentialX-HalfWidth..potentialX + HalfWidth ):
-                        #             for (y := potentialY-HalfHeight..potentialY + HalfHeight ):
-                        #                 if(set Parent.OccupancyGrid[x][y] = 1){}
-                        #                 SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 1200.0},Parent.BossCube)
+                                for (x:= potentialX-HalfWidth..potentialX + HalfWidth ):
+                                    for (y := potentialY-HalfHeight..potentialY + HalfHeight ):
+                                        if(set Parent.OccupancyGrid[x][y] = 1){}
+                                        # SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 1200.0},Parent.BossCube)
                         break
             
         Print("StartPoint: {StartPoint.X} , {StartPoint.Y}")
@@ -72,14 +71,16 @@ RoomV4 := class:
         # set Rotation =0
 
     RotateEntrance()<suspends>: void =
-        # Adjust the entrance point based on the room's rotation
-        oldEntranceX := EntrancePoint.X
-        oldEntranceY := EntrancePoint.Y
-        case (Rotation):
-            90 => set EntrancePoint = CreatePoint(oldEntranceY*-1,oldEntranceX ) 
-            180 => set EntrancePoint = CreatePoint(oldEntranceX, oldEntranceY*-1)
-            270 => set EntrancePoint = CreatePoint(oldEntranceY, oldEntranceX)
-            _=> # If rotation is 0 or invalid, keep the original entrance point
+        for(I->EntrancePoint:EntrancePoints):
+            # Adjust the entrance point based on the room's rotation
+            oldEntranceX := EntrancePoint.X
+            oldEntranceY := EntrancePoint.Y
+            case (Rotation):
+                90 => if(set EntrancePoints[I] = CreatePoint(oldEntranceY*-1,oldEntranceX ) ){}
+                180 => if(set EntrancePoints[I] = CreatePoint(oldEntranceX, oldEntranceY*-1)){}
+                270 => if(set EntrancePoints[I] = CreatePoint(oldEntranceY, oldEntranceX)){}
+                _=> # If rotation is 0 or invalid, keep the original entrance point
+      
 
 
     SpawnRoom()<suspends>: void =
@@ -92,13 +93,14 @@ RoomV4 := class:
 
     MarkEntrance(DebugProp:creative_prop_asset):void=
         # Convert grid position to world coordinates
-        EntranceLocation := vector3{
-            X:= (StartPoint.X + EntrancePoint.X) * TileSize,
-            Y:= (StartPoint.Y + EntrancePoint.Y) * TileSize,
-            Z:= 50.0  # Slightly above the ground for visibility
-        }        
-        SpawnTarget(EntranceLocation, DebugProp)
-        Print("Entrance marked at {EntranceLocation}")
+        for(EntrancePoint:EntrancePoints):
+            EntranceLocation := vector3{
+                X:= (StartPoint.X + EntrancePoint.X) * TileSize,
+                Y:= (StartPoint.Y + EntrancePoint.Y) * TileSize,
+                Z:= 50.0  # Slightly above the ground for visibility
+            }        
+            SpawnTarget(EntranceLocation, DebugProp)
+            Print("Entrance marked at {EntranceLocation}")
 
 
 DungeonV4 := class:
@@ -130,8 +132,9 @@ DungeonV4 := class:
     InitPathFinding()<suspends>:void=
         var RoomEntryPoints: []Point = array{}
         for(room : RoomList):
-            EntranceLocation := CreatePoint(room.StartPoint.X + room.EntrancePoint.X, room.StartPoint.Y + room.EntrancePoint.Y)
-            set RoomEntryPoints += array{EntranceLocation}
+            for(EntrancePoint:room.EntrancePoints):
+                EntranceLocation := CreatePoint(room.StartPoint.X + EntrancePoint.X, room.StartPoint.Y + EntrancePoint.Y)
+                set RoomEntryPoints += array{EntranceLocation}
         
         Triangulation := DelaunayTriangulation{LinePropAsset:= LinePropAsset, BossCube:=BossCube}  # Ensure LinePropAsset is defined or passed appropriately
         StartingTriangles:= Triangulation.Initialize(RoomEntryPoints)
@@ -145,6 +148,8 @@ DungeonV4 := class:
                 set Edges += array{edge}
 
         #
+      
+
         var UniqueEdges :[string]tuple(Point,Point)= map{}
         for (edge : Edges):
             var ShouldSkip:logic = false
@@ -161,6 +166,8 @@ DungeonV4 := class:
         for(Key->Value: UniqueEdges):
             set Edges+= array{Value}
 
+        
+
         var RoomPairs: []tuple(Point, Point) = array{}
 
         # Create all pairs for MST edges
@@ -170,6 +177,17 @@ DungeonV4 := class:
                 
         # Apply Kruskal's MST algorithm to connect all rooms
         var MSTEdges: []Edge = KruskalMST(RoomEntryPoints, Edges)
+        Print("total mst edges: {MSTEdges.Length}")
+        #add a few adges with a low porbablility  from delaunay back to increase room connectivity
+        # for(edge:Edges):
+        #     var IsUnique:logic = true
+        #     for(MSTEdge:MSTEdges):
+        #         if(MSTEdge.Point1.UUID = edge(0).UUID and MSTEdge.Point2.UUID = edge(1).UUID):
+        #             set IsUnique = false
+        #         if(IsUnique = true):
+        #             if(GetRandomFloat(0.0, 1.0) < 0.01):
+        #                 set MSTEdges+= array{Edge{Point1:=edge(0), Point2:=edge(1)}}
+
         Print("total mst edges: {MSTEdges.Length}")
         
         #
@@ -193,7 +211,8 @@ DungeonV4 := class:
        
         set OccupancyGrid = AStar3.OccupancyGrid
         for(room:RoomList):
-            if(set OccupancyGrid[room.StartPoint.X+room.EntrancePoint.X][room.StartPoint.Y+room.EntrancePoint.Y] = 3){}
+            for(EntrancePoint:room.EntrancePoints):
+                if(set OccupancyGrid[room.StartPoint.X+EntrancePoint.X][room.StartPoint.Y+EntrancePoint.Y] = 3){}
             
         for(X:OccupancyGrid):
             var arr:string = ""
@@ -242,7 +261,9 @@ DungeonV4 := class:
 
         for(Player:Parent.GetPlayspace().GetPlayers()):
             if(FC:=Player.GetFortCharacter[], StartRoom:=RoomList[0]):
-                if(FC.TeleportTo[StartRoom.RoomProp.GetTransform().Translation, FC.GetTransform().Rotation]){}
+                Sleep(0.1)
+                Trans:=StartRoom.RoomProp.GetTransform().Translation
+                if(FC.TeleportTo[vector3{X:=Trans.X, Y:=Trans.Y, Z:=Trans.Z+50.0}, FC.GetTransform().Rotation]){}
 
     # Function to sort edge points by ID to ensure consistency
     SortEdgePoints(edge: tuple(Point, Point)): tuple(Point, Point) =
