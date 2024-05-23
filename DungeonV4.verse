@@ -13,7 +13,7 @@ using { /Verse.org/Simulation/Tags }
     # Function
 # Function to create a room
 RoomV4 := class:
-    Asset: DungeonAsset
+    var Asset: DungeonAsset
     var StartPoint: Point = Point{X:=0, Y:=0, UUID:="", ID:=0}
     var EndPoint: Point = Point{X:=0, Y:=0, UUID:="", ID:=0}
     var EntrancePoints: []Point = array{}
@@ -22,7 +22,7 @@ RoomV4 := class:
     var Rotation:int=0
     TileSize:float
     var RoomProp:creative_prop = creative_prop{}
-    Parent:DungeonV4
+    var Parent:DungeonV4
 
     # Initialize room dimensions
     InitDimensions()<suspends>: void =
@@ -61,10 +61,20 @@ RoomV4 := class:
                                 for (x:= potentialX-HalfWidth..potentialX + HalfWidth ):
                                     for (y := potentialY-HalfHeight..potentialY + HalfHeight ):
                                         if(set Parent.OccupancyGrid[x][y] = 1){}
-                                        # SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 1200.0},Parent.BossCube)
+                                        SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 1200.0},Parent.BossCube)
                         break
+
+    
             
         Print("StartPoint: {StartPoint.X} , {StartPoint.Y}")
+
+    MarkPlacedRoom():void=
+        if(HalfWidth:=Floor[Width*1.0/2.0]):
+            if(HalfHeight:=Floor[Height*1.0/2.0]):
+                for (x:= StartPoint.X-HalfWidth..StartPoint.X + HalfWidth ):
+                    for (y := StartPoint.Y-HalfHeight..StartPoint.Y + HalfHeight ):
+                        if(set Parent.OccupancyGrid[x][y] = 1){}
+                        SpawnTarget(vector3{X:= x * TileSize, Y:= y * TileSize, Z:= 2400.0},Parent.BossCube)
 
     RotateRandomly()<suspends>: void =
         if(set Rotation = array{0, 90, 180, 270}[GetRandomInt(0, 3)]){}
